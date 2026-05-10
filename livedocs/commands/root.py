@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from livedocs import ui
+from livedocs.commands.approve import run_approve
 from livedocs.commands.cont import run_continue
 from livedocs.commands.init import run_init
 from livedocs.commands.new import run_new
@@ -81,6 +82,26 @@ def run_root(repo_root: Path | None) -> int:
         )
         choices.append((label, f"continue:{fresh.slug}"))
 
+    if generated:
+        fresh_gen = max(generated, key=lambda iv: iv.last_touched_at)
+        label = (
+            f"Aprovar guia gerado: {fresh_gen.slug} ({fresh_gen.domain})"
+            if cfg.lang == "pt-BR"
+            else f"Approve generated guide: {fresh_gen.slug} ({fresh_gen.domain})"
+        )
+        choices.append((label, f"approve:{fresh_gen.slug}"))
+
+    # Surface the freshest pending agent suggestion (issue #2 — next_recommendation).
+    pending_suggestions = [r for r in state.next_recommendations if r.slug not in state.interviews]
+    if pending_suggestions:
+        suggestion = pending_suggestions[-1]
+        label = (
+            f"Começar guia sugerido: {suggestion.slug} ({suggestion.domain})"
+            if cfg.lang == "pt-BR"
+            else f"Start suggested guide: {suggestion.slug} ({suggestion.domain})"
+        )
+        choices.append((label, f"new_suggested:{suggestion.slug}:{suggestion.domain}"))
+
     choices.append((
         "Começar guia novo" if cfg.lang == "pt-BR" else "Start a new guide",
         "new",
@@ -116,6 +137,12 @@ def run_root(repo_root: Path | None) -> int:
     if picked.startswith("continue:"):
         slug = picked.split(":", 1)[1]
         return run_continue(repo_root, slug=slug)
+    if picked.startswith("approve:"):
+        slug = picked.split(":", 1)[1]
+        return run_approve(repo_root, slug=slug)
+    if picked.startswith("new_suggested:"):
+        _, slug, domain = picked.split(":", 2)
+        return run_new(repo_root, slug=slug, domain=domain)
 
     return 0
 

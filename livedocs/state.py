@@ -81,6 +81,22 @@ class InterviewState(BaseModel):
         return [q for q in self.questions if q.answer is not None]
 
 
+class NextRecommendation(BaseModel):
+    """A guide the agent suggested as the natural next step.
+
+    Captured from the JSON envelope returned by `generate_guides` so the
+    user sees it in `livedocs` (no args) without having to remember to
+    re-read the agent's reply text.
+    """
+
+    slug: str
+    domain: str
+    reason: str = ""
+    suggested_by: str
+    """Slug of the interview whose generation produced this recommendation."""
+    suggested_at: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
+
+
 class GlobalState(BaseModel):
     """All known interviews + last-touched cursor for the project."""
 
@@ -89,6 +105,9 @@ class GlobalState(BaseModel):
     """Keyed by slug."""
 
     last_touched_slug: str | None = None
+
+    next_recommendations: list[NextRecommendation] = Field(default_factory=list)
+    """Pending guide suggestions captured during generate_guides()."""
 
 
 # ---------------------------------------------------------------------------

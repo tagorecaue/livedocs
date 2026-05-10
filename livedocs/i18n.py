@@ -192,6 +192,14 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Arquivos criados/atualizados:",
         "en": "Files created/updated:",
     },
+    "interview_next_suggested": {
+        "pt-BR": "Próximo guia sugerido:",
+        "en": "Suggested next guide:",
+    },
+    "interview_next_command": {
+        "pt-BR": "Quando quiser começar: [bold]livedocs new {slug} --domain {domain}[/bold]",
+        "en": "When ready: [bold]livedocs new {slug} --domain {domain}[/bold]",
+    },
     # ---- status ----
     "status_title": {
         "pt-BR": "Estado dos guias",

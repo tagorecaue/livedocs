@@ -51,6 +51,6 @@ def run_continue(repo_root: Path, slug: str | None = None) -> int:
     if not completed:
         return 0
 
-    ok = generate_guides(repo_root, cfg, interview)
+    ok = generate_guides(repo_root, cfg, interview, global_state=state)
     save_state(repo_root, state)
     return 0 if ok else 1

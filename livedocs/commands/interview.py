@@ -29,6 +29,7 @@ from livedocs.skill import (
 from livedocs.state import (
     GlobalState,
     InterviewState,
+    NextRecommendation,
     ProjectConfig,
     QuestionState,
     save_state,
@@ -239,8 +240,13 @@ def generate_guides(
     repo_root: Path,
     cfg: ProjectConfig,
     interview: InterviewState,
+    global_state: GlobalState | None = None,
 ) -> bool:
-    """Send the full interview transcript to the agent and ask it to write the guides."""
+    """Send the full interview transcript to the agent and ask it to write the guides.
+
+    When `global_state` is provided, agent's `next_recommendation` is persisted into
+    `global_state.next_recommendations` for the smart menu to surface later.
+    """
     agent = ClaudeAgent(repo_root, lang=cfg.lang)
 
     answers_block_lines = []
@@ -282,17 +288,25 @@ def generate_guides(
 
     interview.status = "generated"
 
-    # Best-effort: extract files_written list from result text
-    written: list[str] = []
-    text = result.text or ""
-    # If agent returned JSON wrapper, parse it
-    if text.strip().startswith("{"):
-        try:
-            import json
-            data = json.loads(text.strip())
-            written = list(data.get("files_written", []))
-        except Exception:
-            pass
+    # Parse the agent's JSON envelope: {files_written, summary, next_recommendation}.
+    # If parsing fails (model went off-script), we still mark generated and dump the raw
+    # text so the user sees something useful.
+    written, summary, next_rec = _parse_generate_envelope(result.text or "")
+
+    # Persist next_recommendation in the GlobalState so `livedocs` (no args) can offer it.
+    if next_rec is not None and global_state is not None:
+        nr = NextRecommendation(
+            slug=next_rec.get("slug", "").strip(),
+            domain=next_rec.get("domain", interview.domain).strip(),
+            reason=next_rec.get("reason", "").strip(),
+            suggested_by=interview.slug,
+        )
+        if nr.slug:
+            # Replace any previous suggestion with the same slug (idempotent re-runs).
+            global_state.next_recommendations = [
+                r for r in global_state.next_recommendations if r.slug != nr.slug
+            ]
+            global_state.next_recommendations.append(nr)
 
     ui.success(t("interview_complete"))
     if written:
@@ -300,7 +314,68 @@ def generate_guides(
         ui.info(t("interview_files_created"))
         for f in written:
             ui.console.print(f"  [accent]{f}[/accent]")
-    elif text:
-        # Show the summary as-is
-        ui.console.print(text[:1500])
+    if summary:
+        ui.blank()
+        ui.console.print(f"[muted]{summary}[/muted]")
+    if next_rec is not None and next_rec.get("slug"):
+        ui.blank()
+        ui.console.print(
+            f"[brand]💡 {t('interview_next_suggested')}[/brand] "
+            f"[bold]{next_rec.get('slug')}[/bold] "
+            f"[muted]({next_rec.get('domain', interview.domain)})[/muted]"
+        )
+        if next_rec.get("reason"):
+            ui.console.print(f"   [muted]{next_rec.get('reason')}[/muted]")
+        ui.blank()
+        ui.hint(t("interview_next_command", slug=next_rec.get("slug"), domain=next_rec.get("domain", interview.domain)))
+    elif not written and not summary and result.text:
+        # Fallback when the agent did not return JSON: show raw text.
+        ui.console.print(result.text[:1500])
     return True
+
+
+def _parse_generate_envelope(text: str) -> tuple[list[str], str, dict | None]:
+    """Extract (files_written, summary, next_recommendation) from the agent reply.
+
+    Tolerates code fences and surrounding prose. Returns ([], "", None) on failure
+    (no exception): callers fall back to mark `generated` regardless.
+    """
+    import json
+    import re
+
+    if not text:
+        return [], "", None
+
+    candidate = text.strip()
+    # Strip code fences if present.
+    if candidate.startswith("```"):
+        # crude fence stripper — first line and last line if they are fences
+        lines = candidate.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        candidate = "\n".join(lines).strip()
+
+    # If still not pure JSON, try to find the largest {...} block.
+    if not candidate.startswith("{"):
+        m = re.search(r"\{.*\}", candidate, re.DOTALL)
+        candidate = m.group(0) if m else ""
+
+    if not candidate:
+        return [], "", None
+
+    try:
+        data = json.loads(candidate)
+    except json.JSONDecodeError:
+        return [], "", None
+
+    if not isinstance(data, dict):
+        return [], "", None
+
+    written = [str(f) for f in data.get("files_written", []) if isinstance(f, str)]
+    summary = str(data.get("summary", "") or "")
+    next_rec = data.get("next_recommendation")
+    if not isinstance(next_rec, dict):
+        next_rec = None
+    return written, summary, next_rec

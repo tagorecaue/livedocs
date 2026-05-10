@@ -86,6 +86,6 @@ def run_new(
         return 0  # paused, success-ish
 
     # All answered → generate guides
-    ok = generate_guides(repo_root, cfg, interview)
+    ok = generate_guides(repo_root, cfg, interview, global_state=state)
     save_state(repo_root, state)
     return 0 if ok else 1
