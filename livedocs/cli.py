@@ -27,6 +27,23 @@ app = typer.Typer(
 )
 
 
+# ---------------------------------------------------------------------------
+# Module-level Option singletons (keeps ruff B008 happy for non-trivial types
+# like Path; typer evaluates these once at import time anyway).
+# ---------------------------------------------------------------------------
+
+_OPT_ANSWERS_FILE_NEW = typer.Option(
+    None,
+    "--answers-file",
+    help="YAML file with {qid: answer}; bypasses the interactive Q&A and generates guides.",
+)
+_OPT_ANSWERS_FILE_CONTINUE = typer.Option(
+    None,
+    "--answers-file",
+    help="YAML file with {qid: answer}; applies remaining answers and generates guides.",
+)
+
+
 def _bootstrap_lang(repo_root: Path | None) -> None:
     """Set the active i18n lang from project config if present, else from system locale."""
     if repo_root:
@@ -38,8 +55,19 @@ def _bootstrap_lang(repo_root: Path | None) -> None:
 
 
 @app.callback()
-def main_callback(ctx: typer.Context) -> None:
+def main_callback(
+    ctx: typer.Context,
+    non_interactive: bool = typer.Option(
+        False,
+        "--non-interactive",
+        "-y",
+        help="Refuse prompts and fail fast instead of looping (for scripts/CI).",
+    ),
+) -> None:
     """Default action when no subcommand is given: smart 'where we left off' menu."""
+    # Pin the non-interactive flag for the whole process (issue #1).
+    ui.set_non_interactive(non_interactive)
+
     if ctx.invoked_subcommand is not None:
         return
 
@@ -63,6 +91,7 @@ def cmd_new(
     slug: str = typer.Argument(None, help="Slug for the new guide (kebab-case)."),
     domain: str = typer.Option(None, "--domain", "-d", help="Domain folder for this guide."),
     title: str = typer.Option(None, "--title", "-t", help="Working title."),
+    answers_file: Path = _OPT_ANSWERS_FILE_NEW,
 ) -> None:
     cwd = Path.cwd()
     repo_root = find_repo_root(cwd)
@@ -70,13 +99,14 @@ def cmd_new(
         ui.error(t("err_no_project"))
         raise typer.Exit(code=1)
     _bootstrap_lang(repo_root)
-    rc = run_new(repo_root, slug=slug, domain=domain, title=title)
+    rc = run_new(repo_root, slug=slug, domain=domain, title=title, answers_file=answers_file)
     raise typer.Exit(code=rc)
 
 
 @app.command("continue", help="Resume an in-progress interview.")
 def cmd_continue(
     slug: str = typer.Argument(None, help="Slug to resume (defaults to last touched)."),
+    answers_file: Path = _OPT_ANSWERS_FILE_CONTINUE,
 ) -> None:
     cwd = Path.cwd()
     repo_root = find_repo_root(cwd)
@@ -84,7 +114,7 @@ def cmd_continue(
         ui.error(t("err_no_project"))
         raise typer.Exit(code=1)
     _bootstrap_lang(repo_root)
-    rc = run_continue(repo_root, slug=slug)
+    rc = run_continue(repo_root, slug=slug, answers_file=answers_file)
     raise typer.Exit(code=rc)
 
 

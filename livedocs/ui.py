@@ -42,6 +42,45 @@ THEME = Theme(
 console = Console(theme=THEME, highlight=False)
 
 
+# ---------------------------------------------------------------------------
+# Non-interactive mode (issue #1)
+# ---------------------------------------------------------------------------
+
+class NonInteractiveError(Exception):
+    """Raised when a prompt would be needed but stdin is not a TTY (or --non-interactive was set).
+
+    Caller should catch and translate to ui.error(...) + return non-zero.
+    """
+
+
+_non_interactive: bool = False
+
+
+def set_non_interactive(flag: bool) -> None:
+    global _non_interactive
+    _non_interactive = flag
+
+
+def is_non_interactive() -> bool:
+    """True when prompts are forbidden — either user asked, or stdin isn't a tty."""
+    if _non_interactive:
+        return True
+    import sys
+    try:
+        return not sys.stdin.isatty()
+    except (AttributeError, ValueError):
+        return True
+
+
+def _refuse_if_non_interactive(what: str) -> None:
+    if is_non_interactive():
+        raise NonInteractiveError(
+            f"{what} requires interactive input but the CLI is in non-interactive mode "
+            f"(stdin is not a TTY or --non-interactive was set). "
+            f"Pass --answers-file or pre-fill the value via flag."
+        )
+
+
 # Questionary styling that matches the Rich theme
 QUESTIONARY_STYLE = QStyle(
     [
@@ -140,7 +179,12 @@ def blank() -> None:
 # ---------------------------------------------------------------------------
 
 def ask_text(message: str, *, default: str = "", multiline: bool = False) -> str | None:
-    """Returns answer or None when user aborts (Ctrl-C)."""
+    """Returns answer or None when user aborts (Ctrl-C).
+
+    Raises NonInteractiveError when stdin is not a TTY (issue #1) — replaces
+    the prior behavior where questionary would loop visually on piped input.
+    """
+    _refuse_if_non_interactive(f"prompt {message!r}")
     try:
         if multiline:
             return questionary.text(
@@ -155,6 +199,7 @@ def ask_text(message: str, *, default: str = "", multiline: bool = False) -> str
 
 
 def ask_confirm(message: str, *, default: bool = True) -> bool | None:
+    _refuse_if_non_interactive(f"confirm {message!r}")
     try:
         return questionary.confirm(message, default=default, style=QUESTIONARY_STYLE).ask()
     except (KeyboardInterrupt, EOFError):
@@ -168,6 +213,7 @@ def ask_choice(
     default: str | None = None,
 ) -> str | None:
     """choices: list of either str or (label, value) tuples. Returns the *value*."""
+    _refuse_if_non_interactive(f"choice {message!r}")
     qchoices: list = []
     for c in choices:
         if isinstance(c, tuple):
@@ -188,6 +234,7 @@ def ask_choice(
 
 
 def ask_path(message: str, *, default: str = "", only_directories: bool = False) -> str | None:
+    _refuse_if_non_interactive(f"path {message!r}")
     try:
         return questionary.path(
             message,

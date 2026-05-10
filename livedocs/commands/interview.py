@@ -51,6 +51,62 @@ def _track_cost(interview: InterviewState, result) -> None:
     interview.agent_calls += 1
 
 
+# ---------------------------------------------------------------------------
+# Non-interactive helpers (issue #1) — feed answers from a YAML file.
+# ---------------------------------------------------------------------------
+
+def apply_answers_file(
+    repo_root: Path,
+    global_state: GlobalState,
+    interview: InterviewState,
+    path: Path,
+) -> tuple[int, int, list[str]]:
+    """Apply answers from a YAML file directly onto the interview.
+
+    YAML shape:
+        A1: "Answer text"
+        A2: skip          # or null/None — marks the question as skipped
+        B1: "..."
+
+    Returns (n_answered, n_skipped, unknown_ids). Unknown ids are reported
+    so a typo doesn't fail silently.
+    """
+    import yaml as _yaml
+
+    if not path.exists():
+        raise FileNotFoundError(f"answers file not found: {path}")
+
+    raw = _yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"answers file must be a YAML mapping qid → answer, got {type(raw).__name__}")
+
+    by_id = {q.id: q for q in interview.questions}
+    now = datetime.now().isoformat(timespec="seconds")
+    n_answered = 0
+    n_skipped = 0
+    unknown: list[str] = []
+
+    for qid, value in raw.items():
+        qid = str(qid)
+        q = by_id.get(qid)
+        if q is None:
+            unknown.append(qid)
+            continue
+        if value is None or (isinstance(value, str) and value.strip().lower() in {"skip", "/skip", "pular"}):
+            q.skipped = True
+            q.answered_at = now
+            n_skipped += 1
+        else:
+            q.answer = str(value).strip()
+            q.answered_at = now
+            n_answered += 1
+
+    interview.last_touched_at = now
+    global_state.last_touched_slug = interview.slug
+    save_state(repo_root, global_state)
+    return n_answered, n_skipped, unknown
+
+
 def start_new_interview(
     repo_root: Path,
     cfg: ProjectConfig,
@@ -158,7 +214,16 @@ def run_interview_loop(
         ui.blank()
         ui.hint(t("interview_skip_hint"))
 
-        answer = ui.ask_text(t("interview_answer_q"), multiline=True)
+        answer = None
+        try:
+            answer = ui.ask_text(t("interview_answer_q"), multiline=True)
+        except ui.NonInteractiveError as e:
+            ui.error(str(e))
+            ui.hint(t("interview_paused"))
+            interview.last_touched_at = datetime.now().isoformat(timespec="seconds")
+            save_state(repo_root, global_state)
+            return False
+
         if answer is None:
             ui.warn(t("interview_paused"))
             interview.last_touched_at = datetime.now().isoformat(timespec="seconds")

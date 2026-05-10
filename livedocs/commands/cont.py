@@ -5,13 +5,22 @@ from __future__ import annotations
 from pathlib import Path
 
 from livedocs import ui
-from livedocs.commands.interview import generate_guides, run_interview_loop
+from livedocs.commands.interview import (
+    apply_answers_file,
+    generate_guides,
+    run_interview_loop,
+)
 from livedocs.detect import has_claude_code
 from livedocs.i18n import t
 from livedocs.state import load_config, load_state, save_state
 
 
-def run_continue(repo_root: Path, slug: str | None = None) -> int:
+def run_continue(
+    repo_root: Path,
+    slug: str | None = None,
+    *,
+    answers_file: Path | None = None,
+) -> int:
     cfg = load_config(repo_root)
     if cfg is None:
         ui.error(t("err_no_project"))
@@ -19,6 +28,11 @@ def run_continue(repo_root: Path, slug: str | None = None) -> int:
     if not has_claude_code():
         ui.error(t("err_no_claude"))
         return 1
+
+    # Non-interactive guard: if no answers file, the Q&A loop will prompt.
+    if answers_file is None and ui.is_non_interactive():
+        ui.error(t("err_non_interactive_needs_answers"))
+        return 2
 
     state = load_state(repo_root)
     in_progress = {
@@ -33,11 +47,15 @@ def run_continue(repo_root: Path, slug: str | None = None) -> int:
         if state.last_touched_slug and state.last_touched_slug in in_progress:
             slug = state.last_touched_slug
         else:
-            choices = [(f"{s} ({iv.domain})", s) for s, iv in in_progress.items()]
-            picked = ui.ask_choice(
-                "Qual entrevista continuar?" if cfg.lang == "pt-BR" else "Which interview to continue?",
-                choices=choices,
-            )
+            try:
+                choices = [(f"{s} ({iv.domain})", s) for s, iv in in_progress.items()]
+                picked = ui.ask_choice(
+                    "Qual entrevista continuar?" if cfg.lang == "pt-BR" else "Which interview to continue?",
+                    choices=choices,
+                )
+            except ui.NonInteractiveError as e:
+                ui.error(str(e))
+                return 2
             if picked is None:
                 return 130
             slug = picked
@@ -47,6 +65,28 @@ def run_continue(repo_root: Path, slug: str | None = None) -> int:
         return 1
 
     interview = state.interviews[slug]
+
+    # Non-interactive path (#1): apply answers file and jump to generation.
+    if answers_file is not None:
+        try:
+            n_ans, n_skip, unknown = apply_answers_file(repo_root, state, interview, answers_file)
+        except (FileNotFoundError, ValueError) as e:
+            ui.error(str(e))
+            return 1
+        ui.success(t("answers_file_applied", answered=n_ans, skipped=n_skip, total=len(interview.questions)))
+        if unknown:
+            ui.warn(t("answers_file_unknown_ids", ids=", ".join(unknown)))
+        from datetime import datetime
+        now = datetime.now().isoformat(timespec="seconds")
+        for q in interview.questions:
+            if q.answer is None and not q.skipped:
+                q.skipped = True
+                q.answered_at = now
+        save_state(repo_root, state)
+        ok = generate_guides(repo_root, cfg, interview, global_state=state)
+        save_state(repo_root, state)
+        return 0 if ok else 1
+
     completed = run_interview_loop(repo_root, cfg, state, interview)
     if not completed:
         return 0

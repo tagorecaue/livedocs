@@ -208,6 +208,10 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Agente não detalhou arquivos no JSON, mas {n} guia(s) foram encontrados em disco e aceitos.",
         "en": "Agent did not list files in JSON, but {n} guide(s) were found on disk and accepted.",
     },
+    "cost_summary": {
+        "pt-BR": "{calls} chamada(s) ao agente, US${cost:.4f}, {secs:.1f}s",
+        "en": "{calls} agent call(s), US${cost:.4f}, {secs:.1f}s",
+    },
     "interview_next_suggested": {
         "pt-BR": "Próximo guia sugerido:",
         "en": "Suggested next guide:",
@@ -269,6 +273,19 @@ STRINGS: dict[str, dict[Lang, str]] = {
     "abort": {
         "pt-BR": "Cancelado.",
         "en": "Aborted.",
+    },
+    # ---- non-interactive (#1) ----
+    "answers_file_applied": {
+        "pt-BR": "Respostas aplicadas: {answered} respondidas, {skipped} puladas (de {total}).",
+        "en": "Answers applied: {answered} answered, {skipped} skipped (of {total}).",
+    },
+    "answers_file_unknown_ids": {
+        "pt-BR": "IDs de pergunta desconhecidos no arquivo (ignorados): {ids}",
+        "en": "Unknown question IDs in file (ignored): {ids}",
+    },
+    "err_non_interactive_needs_answers": {
+        "pt-BR": "Modo não-interativo exige [bold]--answers-file[/bold]. Sem ele, a entrevista precisaria perguntar e não há TTY.",
+        "en": "Non-interactive mode requires [bold]--answers-file[/bold]. Without it, the interview would need to prompt and there's no TTY.",
     },
     # ---- approve ----
     "approve_none_pending": {
