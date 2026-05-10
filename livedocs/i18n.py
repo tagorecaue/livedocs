@@ -209,6 +209,10 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Em andamento",
         "en": "In progress",
     },
+    "status_generated": {
+        "pt-BR": "Gerado (aguardando aprovação)",
+        "en": "Generated (awaiting approval)",
+    },
     "status_reviewed": {
         "pt-BR": "Revisado",
         "en": "Reviewed",
@@ -237,6 +241,27 @@ STRINGS: dict[str, dict[Lang, str]] = {
     "abort": {
         "pt-BR": "Cancelado.",
         "en": "Aborted.",
+    },
+    # ---- approve ----
+    "approve_none_pending": {
+        "pt-BR": "Nenhum guia aguardando aprovação.",
+        "en": "No guides awaiting approval.",
+    },
+    "approve_pick_q": {
+        "pt-BR": "Qual guia aprovar?",
+        "en": "Which guide do you want to approve?",
+    },
+    "approve_wrong_status": {
+        "pt-BR": "[bold]{slug}[/bold] está em [bold]{status}[/bold] — só guias em [bold]generated[/bold] podem ser aprovados.",
+        "en": "[bold]{slug}[/bold] is [bold]{status}[/bold] — only [bold]generated[/bold] guides can be approved.",
+    },
+    "approve_done": {
+        "pt-BR": "Guia [bold]{slug}[/bold] aprovado. Status: [ok]reviewed[/ok].",
+        "en": "Guide [bold]{slug}[/bold] approved. Status: [ok]reviewed[/ok].",
+    },
+    "err_slug_not_found": {
+        "pt-BR": "Slug [bold]{slug}[/bold] não encontrado.",
+        "en": "Slug [bold]{slug}[/bold] not found.",
     },
 }
 

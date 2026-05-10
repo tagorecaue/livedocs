@@ -280,7 +280,7 @@ def generate_guides(
         ui.error(result.error_message or "Agent error during guide generation.")
         return False
 
-    interview.status = "completed"
+    interview.status = "generated"
 
     # Best-effort: extract files_written list from result text
     written: list[str] = []

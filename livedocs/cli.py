@@ -7,6 +7,7 @@ from pathlib import Path
 import typer
 
 from livedocs import ui
+from livedocs.commands.approve import run_approve
 from livedocs.commands.cont import run_continue
 from livedocs.commands.init import run_init
 from livedocs.commands.new import run_new
@@ -108,6 +109,20 @@ def cmd_review() -> None:
         raise typer.Exit(code=1)
     _bootstrap_lang(repo_root)
     rc = run_review(repo_root)
+    raise typer.Exit(code=rc)
+
+
+@app.command("approve", help="Mark a generated guide as reviewed by a human.")
+def cmd_approve(
+    slug: str = typer.Argument(None, help="Slug to approve (defaults to single pending or interactive pick)."),
+) -> None:
+    cwd = Path.cwd()
+    repo_root = find_repo_root(cwd)
+    if repo_root is None:
+        ui.error(t("err_no_project"))
+        raise typer.Exit(code=1)
+    _bootstrap_lang(repo_root)
+    rc = run_approve(repo_root, slug=slug)
     raise typer.Exit(code=rc)
 
 

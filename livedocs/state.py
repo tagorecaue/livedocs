@@ -68,7 +68,7 @@ class InterviewState(BaseModel):
     title: str = ""
     started_at: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
     last_touched_at: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
-    status: Literal["draft", "in_progress", "completed", "stale"] = "in_progress"
+    status: Literal["draft", "in_progress", "generated", "reviewed", "stale"] = "in_progress"
     cursor: int = 0
     """Index of the next question to ask."""
     questions: list[QuestionState] = Field(default_factory=list)
@@ -147,7 +147,21 @@ def load_state(repo_root: Path) -> GlobalState:
         return GlobalState()
     with p.open("rb") as f:
         data = tomllib.load(f)
+    _migrate_state_inplace(data)
     return GlobalState.model_validate(data)
+
+
+def _migrate_state_inplace(data: dict) -> None:
+    """Light forward migrations for state.toml.
+
+    v0.1.0 → v0.1.1: status "completed" was renamed to "generated" (issue #5)
+    so we can distinguish between "agent finished writing" and "human reviewed".
+    Old state files keep loading instead of crashing on the new Literal.
+    """
+    interviews = data.get("interviews") or {}
+    for iv in interviews.values():
+        if iv.get("status") == "completed":
+            iv["status"] = "generated"
 
 
 def save_state(repo_root: Path, state: GlobalState) -> None:

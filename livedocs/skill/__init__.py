@@ -175,14 +175,14 @@ The interview is complete. Write two paired markdown guides + the interview reco
      Veja também
    - Zero technical jargon. Business language only.
    - Front-matter with: slug, domain, audience, flavor=produto, source_files,
-     status=reviewed, last_interview=today
+     status=generated, last_interview=today
 2. **`{docs_dir}/{domain}/{slug}.tech.md`** — `flavor: tecnico`
    - 8 sections: Modelo de dados / Pontos de entrada / Diagrama de transições /
      Regras invariantes (R1, R2, …) / UI cores selos / Pendências / Material
      de referência / Veja também
    - Technical detail welcome. Cite `file:line`.
    - Front-matter with: slug, domain, audience, flavor=tecnico, source_files,
-     status=reviewed, last_interview=today
+     status=generated, last_interview=today
 3. **`{docs_dir}/{domain}/_meta/{slug}.interview.md`** — Q&A record
    - Standard `**Resposta:**` inline + `---` separator format
 

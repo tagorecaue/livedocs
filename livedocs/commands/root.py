@@ -41,7 +41,8 @@ def run_root(repo_root: Path | None) -> int:
 
     # Compose a "where we left off" snapshot
     in_progress = [iv for iv in state.interviews.values() if iv.status == "in_progress"]
-    completed = [iv for iv in state.interviews.values() if iv.status == "completed"]
+    generated = [iv for iv in state.interviews.values() if iv.status == "generated"]
+    reviewed = [iv for iv in state.interviews.values() if iv.status == "reviewed"]
     stale = [iv for iv in state.interviews.values() if iv.status == "stale"]
 
     ui.section(t("where_we_left"))
@@ -49,7 +50,8 @@ def run_root(repo_root: Path | None) -> int:
         ui.info("Nenhum guia ainda." if cfg.lang == "pt-BR" else "No guides yet.")
     else:
         ui.console.print(
-            f"  [ok]{len(completed)}[/ok] {('concluídos' if cfg.lang == 'pt-BR' else 'completed')}"
+            f"  [ok]{len(reviewed)}[/ok] {('aprovados' if cfg.lang == 'pt-BR' else 'approved')}"
+            + f"   ·   [accent]{len(generated)}[/accent] {('aguardando aprovação' if cfg.lang == 'pt-BR' else 'awaiting approval')}"
             + f"   ·   [warn]{len(in_progress)}[/warn] {('em andamento' if cfg.lang == 'pt-BR' else 'in progress')}"
             + (f"   ·   [err]{len(stale)}[/err] {('defasados' if cfg.lang == 'pt-BR' else 'stale')}" if stale else "")
         )

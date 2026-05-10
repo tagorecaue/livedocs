@@ -32,7 +32,9 @@ def run_status(repo_root: Path) -> int:
         total = len(iv.questions)
         if iv.status == "in_progress":
             label = f"[warn]{t('status_in_progress')}[/warn]"
-        elif iv.status == "completed":
+        elif iv.status == "generated":
+            label = f"[accent]{t('status_generated')}[/accent]"
+        elif iv.status == "reviewed":
             label = f"[ok]{t('status_reviewed')}[/ok]"
         elif iv.status == "stale":
             label = f"[err]{t('status_stale')}[/err]"
