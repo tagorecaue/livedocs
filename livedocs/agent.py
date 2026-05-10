@@ -1,11 +1,16 @@
 """Agent wrapper — fala com o Claude Code CLI via subprocess.
 
 Estratégia:
-- Cada turno é um `claude --print --output-format=json --permission-mode=acceptEdits`.
+- Cada turno é um `claude --print --output-format=json` com allowlist explícito de tools.
 - Adicionamos `--add-dir` pro repo do usuário (Claude já tá no cwd, mas explicitar).
 - Passamos o system prompt customizado via `--append-system-prompt`.
 - O prompt do user vai como argumento posicional.
 - Lemos o JSON, extraímos `result`, parseamos como JSON estruturado quando aplicável.
+
+Segurança (issue #6):
+- NÃO usamos `--permission-mode=acceptEdits` (foot-gun: dá Edit livre em todo --add-dir).
+- Usamos `--allowedTools` com whitelist mínima: Read, Glob, Grep, Write.
+- Edit/Bash/WebFetch ficam de fora — agente não pode modificar fonte do usuário.
 
 Sem streaming no v0 — usamos spinner do nosso lado e mostramos o output quando terminar.
 """
@@ -66,11 +71,14 @@ class ClaudeAgent:
                 "Claude Code CLI not found on PATH. Install it from https://claude.com/code"
             )
 
+        # Tool whitelist: Read/Glob/Grep pra explorar código, Write pra criar guides.
+        # Edit/Bash/WebFetch fora do allowlist — agente NÃO pode modificar fonte do usuário.
+        # Isso troca `--permission-mode=acceptEdits` (que liberava Edit em --add-dir).
         cmd: list[str] = [
             "claude",
             "--print",
             "--output-format=json",
-            "--permission-mode=acceptEdits",
+            "--allowedTools", "Read,Glob,Grep,Write",
             "--add-dir", str(self.repo_root),
         ]
 
