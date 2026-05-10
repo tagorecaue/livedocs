@@ -225,6 +225,10 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Total: {n} guia(s)",
         "en": "Total: {n} guide(s)",
     },
+    "status_total_cost": {
+        "pt-BR": "Custo acumulado: {calls} chamada(s), US${cost:.4f}",
+        "en": "Accumulated cost: {calls} call(s), US${cost:.4f}",
+    },
     "status_no_guides": {
         "pt-BR": "Nenhum guia ainda. Rode [bold]livedocs new <slug>[/bold] para começar o primeiro.",
         "en": "No guides yet. Run [bold]livedocs new <slug>[/bold] to start the first one.",

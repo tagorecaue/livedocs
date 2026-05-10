@@ -9,7 +9,7 @@ from livedocs.i18n import t
 from livedocs.state import load_config, load_state
 
 
-def run_status(repo_root: Path) -> int:
+def run_status(repo_root: Path, with_cost: bool = False) -> int:
     cfg = load_config(repo_root)
     if cfg is None:
         ui.error(t("err_no_project"))
@@ -22,10 +22,13 @@ def run_status(repo_root: Path) -> int:
 
     ui.section(t("status_title"))
 
-    table = ui.make_table(
-        "slug", "domain", "status",
-        "Q ✓/total" if cfg.lang != "pt-BR" else "Q ✓/total",
-    )
+    columns = ["slug", "domain", "status", "Q ✓/total"]
+    if with_cost:
+        columns.extend(["calls", "US$"])
+
+    table = ui.make_table(*columns)
+    total_cost = 0.0
+    total_calls = 0
     for slug, iv in sorted(state.interviews.items()):
         answered = sum(1 for q in iv.questions if q.answer is not None)
         skipped = sum(1 for q in iv.questions if q.skipped)
@@ -40,11 +43,15 @@ def run_status(repo_root: Path) -> int:
             label = f"[err]{t('status_stale')}[/err]"
         else:
             label = t("status_draft")
-        table.add_row(
-            slug, iv.domain, label,
-            f"{answered + skipped}/{total}",
-        )
+        row = [slug, iv.domain, label, f"{answered + skipped}/{total}"]
+        if with_cost:
+            row.extend([str(iv.agent_calls), f"{iv.total_cost_usd:.4f}"])
+            total_cost += iv.total_cost_usd
+            total_calls += iv.agent_calls
+        table.add_row(*row)
     ui.console.print(table)
     ui.blank()
     ui.info(t("status_total", n=len(state.interviews)))
+    if with_cost:
+        ui.info(t("status_total_cost", calls=total_calls, cost=total_cost))
     return 0

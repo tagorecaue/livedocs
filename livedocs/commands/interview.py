@@ -40,6 +40,17 @@ PAUSE_TOKENS = {"/sair", "/exit", "/quit", "/q"}
 EDITOR_TOKENS = {"/editor", "/edit", "/e"}
 
 
+def _track_cost(interview: InterviewState, result) -> None:
+    """Accumulate cost/duration/call-count from an AgentResult into the interview.
+
+    Centralized so cost tracking stays consistent across start_new_interview,
+    _check_coverage, generate_guides and any future call site.
+    """
+    interview.total_cost_usd += float(result.cost_usd or 0.0)
+    interview.total_duration_ms += int(result.duration_ms or 0)
+    interview.agent_calls += 1
+
+
 def start_new_interview(
     repo_root: Path,
     cfg: ProjectConfig,
@@ -101,6 +112,10 @@ def start_new_interview(
         domain=domain,
         title=data.get("title", title or slug),
         questions=questions,
+        # Cost from the very first call (interview prep) accounted for here (#3).
+        total_cost_usd=float(result.cost_usd or 0.0),
+        total_duration_ms=int(result.duration_ms or 0),
+        agent_calls=1,
     )
     global_state.interviews[slug] = interview
     global_state.last_touched_slug = slug
@@ -177,7 +192,7 @@ def run_interview_loop(
                          if other.answer is None and not other.skipped and other.id != q.id]
         if other_pending:
             try:
-                covered_ids = _check_coverage(agent, q, stripped, other_pending)
+                covered_ids = _check_coverage(agent, interview, q, stripped, other_pending)
             except AgentError as e:
                 ui.warn(f"Coverage check skipped: {e}")
                 covered_ids = []
@@ -191,6 +206,7 @@ def run_interview_loop(
 
 def _check_coverage(
     agent: ClaudeAgent,
+    interview: InterviewState,
     answered: QuestionState,
     answer: str,
     pending: list[QuestionState],
@@ -204,6 +220,7 @@ def _check_coverage(
     )
     with ui.spinner("…"):
         result = agent.call(prompt, expect_json=True, timeout=90)
+    _track_cost(interview, result)
     if result.is_error or not result.json_data:
         return []
     data = result.json_data
@@ -282,6 +299,9 @@ def generate_guides(
         ui.error(str(e))
         return False
 
+    # Track cost even on error so the user sees what they paid for the failed run.
+    _track_cost(interview, result)
+
     if result.is_error:
         ui.error(result.error_message or "Agent error during guide generation.")
         return False
@@ -335,6 +355,12 @@ def generate_guides(
             global_state.next_recommendations.append(nr)
 
     ui.success(t("interview_complete"))
+    if interview.total_cost_usd > 0 or interview.agent_calls > 0:
+        ui.console.print(
+            f"  [muted]· "
+            f"{t('cost_summary', calls=interview.agent_calls, cost=interview.total_cost_usd, secs=interview.total_duration_ms / 1000)}"
+            f"[/muted]"
+        )
     if written:
         ui.blank()
         ui.info(t("interview_files_created"))

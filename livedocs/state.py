@@ -74,6 +74,11 @@ class InterviewState(BaseModel):
     questions: list[QuestionState] = Field(default_factory=list)
     notes: str = ""
 
+    # Cost tracking (issue #3) — accumulated across all agent calls for this interview.
+    total_cost_usd: float = 0.0
+    total_duration_ms: int = 0
+    agent_calls: int = 0
+
     def remaining(self) -> list[QuestionState]:
         return [q for q in self.questions if q.answer is None and not q.skipped]
 

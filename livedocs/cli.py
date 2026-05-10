@@ -89,14 +89,16 @@ def cmd_continue(
 
 
 @app.command("status", help="Show all guides and their status.")
-def cmd_status() -> None:
+def cmd_status(
+    with_cost: bool = typer.Option(False, "--with-cost", help="Include agent call count and cost columns."),
+) -> None:
     cwd = Path.cwd()
     repo_root = find_repo_root(cwd)
     if repo_root is None:
         ui.error(t("err_no_project"))
         raise typer.Exit(code=1)
     _bootstrap_lang(repo_root)
-    rc = run_status(repo_root)
+    rc = run_status(repo_root, with_cost=with_cost)
     raise typer.Exit(code=rc)
 
 
