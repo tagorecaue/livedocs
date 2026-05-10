@@ -286,12 +286,38 @@ def generate_guides(
         ui.error(result.error_message or "Agent error during guide generation.")
         return False
 
-    interview.status = "generated"
-
     # Parse the agent's JSON envelope: {files_written, summary, next_recommendation}.
-    # If parsing fails (model went off-script), we still mark generated and dump the raw
-    # text so the user sees something useful.
+    # If parsing fails (model went off-script), we still record the raw text so
+    # the user sees something useful.
     written, summary, next_rec = _parse_generate_envelope(result.text or "")
+
+    # Verify the agent actually wrote what it claimed (issue #10 — guard against
+    # silent failure / hallucinated paths). If anything is missing, do NOT mark
+    # the interview as 'generated' — keep it 'in_progress' so the user can rerun.
+    missing = [f for f in written if not (repo_root / f).exists()]
+    if written and missing:
+        ui.error(t("interview_files_missing", n=len(missing), total=len(written)))
+        for f in missing:
+            ui.console.print(f"  [err]✗[/err] {f}")
+        ui.hint(t("interview_files_missing_hint"))
+        return False
+
+    if not written:
+        # Agent did not return a parseable list. Cross-check against expected paths.
+        expected = [
+            f"{cfg.docs_dir}/{interview.domain}/{interview.slug}.md",
+            f"{cfg.docs_dir}/{interview.domain}/{interview.slug}.tech.md",
+        ]
+        actually_present = [p for p in expected if (repo_root / p).exists()]
+        if not actually_present:
+            ui.error(t("interview_no_files_written"))
+            ui.hint(t("interview_files_missing_hint"))
+            return False
+        # Recover: agent wrote files but didn't tell us — use the cross-check.
+        written = actually_present
+        ui.warn(t("interview_files_recovered", n=len(written)))
+
+    interview.status = "generated"
 
     # Persist next_recommendation in the GlobalState so `livedocs` (no args) can offer it.
     if next_rec is not None and global_state is not None:

@@ -192,6 +192,22 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Arquivos criados/atualizados:",
         "en": "Files created/updated:",
     },
+    "interview_files_missing": {
+        "pt-BR": "Agente alegou criar {total} arquivos mas {n} não existem no disco:",
+        "en": "Agent claimed to create {total} files but {n} are missing on disk:",
+    },
+    "interview_files_missing_hint": {
+        "pt-BR": "Entrevista mantida em [bold]in_progress[/bold]. Rode [bold]livedocs continue[/bold] para tentar regerar.",
+        "en": "Interview kept as [bold]in_progress[/bold]. Run [bold]livedocs continue[/bold] to retry.",
+    },
+    "interview_no_files_written": {
+        "pt-BR": "Agente não retornou lista de arquivos e nenhum guia foi encontrado em disco.",
+        "en": "Agent returned no file list and no guides were found on disk.",
+    },
+    "interview_files_recovered": {
+        "pt-BR": "Agente não detalhou arquivos no JSON, mas {n} guia(s) foram encontrados em disco e aceitos.",
+        "en": "Agent did not list files in JSON, but {n} guide(s) were found on disk and accepted.",
+    },
     "interview_next_suggested": {
         "pt-BR": "Próximo guia sugerido:",
         "en": "Suggested next guide:",
