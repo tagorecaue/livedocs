@@ -645,6 +645,26 @@ def generate_guides(
 
     interview.status = "generated"
 
+    # ----- Phase D.1 + D.2 + D.3 -----
+    # Post-generation: run 3-dimension audit in parallel, apply auto-fixes
+    # in up to MAX_CYCLES iterations, then push remaining issues to inbox.
+    if global_state is not None:
+        try:
+            from livedocs.evaluator import run_evaluations
+            from livedocs.inbox import push_issues_to_inbox
+            from livedocs.iteration import iterate_until_clean
+
+            evals = run_evaluations(repo_root, cfg, global_state, interview)
+            remaining = iterate_until_clean(repo_root, cfg, global_state, interview, evals)
+            if remaining:
+                added = push_issues_to_inbox(global_state, interview.slug, remaining)
+                if added:
+                    ui.blank()
+                    ui.info(t("inbox_items_added", n=added))
+        except Exception as e:
+            # Evaluation/iteration failures must not block the generated guides.
+            ui.warn(f"Post-generation audit error (guide already saved): {e}")
+
     if next_rec is not None and global_state is not None and next_rec.get("slug"):
         nr = NextRecommendation(
             slug=str(next_rec["slug"]).strip(),

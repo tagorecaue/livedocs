@@ -406,6 +406,117 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Auditando evidências antes de gerar",
         "en": "Auditing evidence before generation",
     },
+    # ---- Phase D.1 — Post-generation evaluators ----
+    "eval_running": {
+        "pt-BR": "Auditando o guia gerado em 3 dimensões",
+        "en": "Auditing the generated guide on 3 dimensions",
+    },
+    "eval_running_hint": {
+        "pt-BR": "(Rodando em paralelo. Cada chamada lê o guia com uma persona diferente.)",
+        "en": "(Running in parallel. Each call reads the guide with a different persona.)",
+    },
+    "eval_dim_failed": {
+        "pt-BR": "Dimensão [bold]{dim}[/bold] falhou: {err}",
+        "en": "Dimension [bold]{dim}[/bold] failed: {err}",
+    },
+    "eval_dim_product_clarity": {
+        "pt-BR": "Clareza de produto",
+        "en": "Product clarity",
+    },
+    "eval_dim_tech_completeness": {
+        "pt-BR": "Completude técnica",
+        "en": "Tech completeness",
+    },
+    "eval_dim_base_coherence": {
+        "pt-BR": "Coerência com a base",
+        "en": "Base coherence",
+    },
+    # ---- Phase D.2 — Internal iteration ----
+    "iter_cycle": {
+        "pt-BR": "Ciclo {n}/{total} — aplicando {fixes} ajuste(s)",
+        "en": "Cycle {n}/{total} — applying {fixes} fix(es)",
+    },
+    "iter_applying": {
+        "pt-BR": "Aplicando {n} ajuste(s) automáticos",
+        "en": "Applying {n} auto-fix(es)",
+    },
+    "iter_no_progress": {
+        "pt-BR": "Não consegui aplicar ajustes adicionais; saindo do loop.",
+        "en": "Could not apply further fixes; exiting loop.",
+    },
+    "iter_polished": {
+        "pt-BR": "Polido em {n} ciclo(s)",
+        "en": "Polished in {n} cycle(s)",
+    },
+    # ---- Phase D.3 — Inbox ----
+    "inbox_title": {
+        "pt-BR": "Inbox — {n} item(s) pendente(s)",
+        "en": "Inbox — {n} pending item(s)",
+    },
+    "inbox_empty": {
+        "pt-BR": "Nenhum item pendente na inbox.",
+        "en": "Inbox is empty.",
+    },
+    "inbox_action_q": {
+        "pt-BR": "O que fazer com este item?",
+        "en": "What to do with this item?",
+    },
+    "inbox_accept": {
+        "pt-BR": "Aceitar (aplicar)",
+        "en": "Accept (apply)",
+    },
+    "inbox_reject": {
+        "pt-BR": "Rejeitar (descartar)",
+        "en": "Reject (drop)",
+    },
+    "inbox_snooze": {
+        "pt-BR": "Adiar (manter pendente)",
+        "en": "Snooze (keep pending)",
+    },
+    "inbox_view": {
+        "pt-BR": "Ver detalhes completos",
+        "en": "View full details",
+    },
+    "inbox_quit": {
+        "pt-BR": "Sair da inbox",
+        "en": "Exit inbox",
+    },
+    "inbox_accepted": {
+        "pt-BR": "[ok]✓[/ok] {id} aplicado.",
+        "en": "[ok]✓[/ok] {id} applied.",
+    },
+    "inbox_apply_failed": {
+        "pt-BR": "[err]✗[/err] Falha ao aplicar {id}.",
+        "en": "[err]✗[/err] Failed to apply {id}.",
+    },
+    "inbox_rejected": {
+        "pt-BR": "Rejeitado.",
+        "en": "Rejected.",
+    },
+    "inbox_snoozed": {
+        "pt-BR": "Adiado.",
+        "en": "Snoozed.",
+    },
+    "inbox_remaining": {
+        "pt-BR": "{n} item(s) ainda pendente(s) — rode [bold]livedocs inbox[/bold] de novo quando quiser.",
+        "en": "{n} item(s) still pending — run [bold]livedocs inbox[/bold] again when you want.",
+    },
+    "inbox_cleared": {
+        "pt-BR": "Inbox limpa!",
+        "en": "Inbox cleared!",
+    },
+    "inbox_applying": {
+        "pt-BR": "Aplicando a edição",
+        "en": "Applying the edit",
+    },
+    "inbox_items_added": {
+        "pt-BR": "{n} sugestão(ões) adicionada(s) à inbox. Veja com [bold]livedocs inbox[/bold].",
+        "en": "{n} suggestion(s) added to the inbox. See with [bold]livedocs inbox[/bold].",
+    },
+    "reverse_link_sweeping": {
+        "pt-BR": "Propondo cross-links reversos pra outros guias",
+        "en": "Proposing reverse cross-links to other guides",
+    },
     # ---- Fact kinds (translated labels for UI) ----
     "fact_kind_trigger": {"pt-BR": "gatilho", "en": "trigger"},
     "fact_kind_invariant": {"pt-BR": "invariante", "en": "invariant"},

@@ -56,7 +56,10 @@ def run_approve(repo_root: Path, slug: str | None = None) -> int:
         return 1
 
     # Update front-matter on both guide files (best-effort).
-    docs_dir = repo_root / cfg.docs_dir / iv.domain
+    docs_dir = repo_root / cfg.docs_dir
+    if cfg.guides_subdir:
+        docs_dir = docs_dir / cfg.guides_subdir
+    docs_dir = docs_dir / iv.domain
     candidates = [docs_dir / f"{slug}.md", docs_dir / f"{slug}.tech.md"]
     updated_files: list[str] = []
     for path in candidates:
@@ -73,6 +76,20 @@ def run_approve(repo_root: Path, slug: str | None = None) -> int:
     if updated_files:
         for f in updated_files:
             ui.console.print(f"  [muted]· front-matter atualizado:[/muted] [accent]{f}[/accent]")
+
+    # ----- Phase D.4 — Reverse cross-link sweep -----
+    # After human approval, ask the agent to propose reverse-links from other
+    # guides to this newly-approved one. Each proposal goes to the inbox.
+    try:
+        from livedocs.commands.reverse_link import run_reverse_link_sweep
+        added = run_reverse_link_sweep(repo_root, cfg, state, iv)
+        if added:
+            ui.blank()
+            ui.info(t("inbox_items_added", n=added))
+            save_state(repo_root, state)
+    except Exception as e:
+        ui.warn(f"Reverse-link sweep skipped: {e}")
+
     return 0
 
 
