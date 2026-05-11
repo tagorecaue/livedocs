@@ -117,6 +117,18 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Rode [bold]livedocs[/bold] (sem argumentos) e eu te guio a partir daqui.",
         "en": "Run [bold]livedocs[/bold] (no args) and I'll guide you from there.",
     },
+    "init_style_q": {
+        "pt-BR": "Qual estilo de escrita você quer para os guias?",
+        "en": "Which writing style do you want for your guides?",
+    },
+    "init_style_hint": {
+        "pt-BR": "Você pode personalizar isso depois editando [bold].livedocs/style.md[/bold]",
+        "en": "You can customize this later by editing [bold].livedocs/style.md[/bold]",
+    },
+    "init_style_customize": {
+        "pt-BR": "Para personalizar o estilo: edite [bold]{path}[/bold].",
+        "en": "To customize the style: edit [bold]{path}[/bold].",
+    },
     # ---- free-text intent (rewritten for v0.2 fact-driven flow) ----
     "intent_q": {
         "pt-BR": "O que você quer documentar?",

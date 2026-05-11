@@ -119,6 +119,24 @@ def run_init(cwd: Path) -> int:
         ans = ui.ask_confirm(t("init_graphify_q"), default=False)
         use_graphify = bool(ans)
 
+    # 6.5. Style (new in v0.2 D.0)
+    from livedocs.skill.styles import (
+        all_styles,
+        copy_style_to_project,
+        style_label,
+    )
+    ui.blank()
+    ui.section(t("init_style_q"))
+    ui.hint(t("init_style_hint"))
+    style_choice = ui.ask_choice(
+        t("init_style_q"),
+        choices=[(style_label(s, chosen), s) for s in all_styles()],
+        default="narrative",
+    )
+    if style_choice is None:
+        ui.warn(t("abort"))
+        return 130
+
     # 7. Persist
     cfg = ProjectConfig(
         project_slug=slug,
@@ -126,14 +144,20 @@ def run_init(cwd: Path) -> int:
         provider="claude-code",
         docs_dir=docs_dir,
         use_graphify=use_graphify,
+        style=style_choice,
     )
     save_config(cwd, cfg)
     ensure_gitignore_for_state(cwd)
+
+    # Copy the chosen style template to <repo>/.livedocs/style.md
+    style_target = cwd / ".livedocs" / "style.md"
+    copy_style_to_project(style_choice, style_target)
 
     # Make sure docs_dir exists (we may want to write to it later)
     (cwd / docs_dir).mkdir(parents=True, exist_ok=True)
 
     ui.blank()
     ui.success(t("init_done", path=str(config_path(cwd).relative_to(cwd))))
+    ui.hint(t("init_style_customize", path=".livedocs/style.md"))
     ui.hint(t("init_next_step"))
     return 0

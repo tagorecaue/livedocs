@@ -48,6 +48,13 @@ class ProjectConfig(BaseModel):
     use_graphify: bool = False
     """Whether the user opted into graphify integration."""
 
+    style: str = "narrative"
+    """Writing style for guides. One of: narrative | reference | tutorial.
+
+    The init wizard copies the chosen template to <repo>/.livedocs/style.md
+    where it can be customized freely.
+    """
+
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
 
 

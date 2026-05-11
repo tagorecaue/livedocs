@@ -49,6 +49,9 @@ packages = ["livedocs"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "livedocs/skill/SKILL.md" = "livedocs/skill/SKILL.md"
+"livedocs/skill/styles/narrative.md" = "livedocs/skill/styles/narrative.md"
+"livedocs/skill/styles/reference.md" = "livedocs/skill/styles/reference.md"
+"livedocs/skill/styles/tutorial.md" = "livedocs/skill/styles/tutorial.md"
 
 [dependency-groups]
 dev = [

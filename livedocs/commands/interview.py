@@ -574,6 +574,10 @@ def generate_guides(
     full_dir_path = guides_root(repo_root, cfg) / interview.domain
     full_dir_rel = full_dir_path.relative_to(repo_root)
 
+    # Load the project's style guide so the agent writes in the user's chosen voice.
+    from livedocs.skill.styles import load_project_style
+    style_content = load_project_style(repo_root)
+
     prompt = _render_prompt(PROMPT_GENERATE_GUIDES,
         slug=interview.slug,
         domain=interview.domain,
@@ -586,6 +590,18 @@ def generate_guides(
         today=datetime.now().date().isoformat(),
         facts_full=json.dumps(facts_payload, ensure_ascii=False, indent=2),
         quality_score=f"{interview.confidence_score:.2f}",
+    )
+
+    # Append the style guide so the agent writes in the project's voice.
+    # Done as a suffix instead of a template placeholder to keep the prompt
+    # template stable across style customizations.
+    prompt = (
+        prompt
+        + "\n\n---\n\n# Writing style guide (project-specific)\n\n"
+        + "The guide MUST follow these style rules. If the rules below conflict "
+        + "with anything earlier in this prompt, the style guide wins for voice "
+        + "and tone (the earlier rules win for structure and front-matter).\n\n"
+        + style_content
     )
 
     ui.blank()
