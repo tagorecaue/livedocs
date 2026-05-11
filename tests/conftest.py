@@ -248,12 +248,17 @@ def _silence_ui(monkeypatch: pytest.MonkeyPatch) -> None:
 
     Per-test, this replaces ui.console with a non-printing dummy. Tests that
     need to assert on UI output should re-monkeypatch with their own capture.
+
+    The console exposes a bunch of methods (print, rule, status, etc) — we
+    return a no-op for any attribute access so production code never crashes
+    against a missing method on the stub.
     """
     from livedocs import ui
 
     class _NullConsole:
-        def print(self, *args: Any, **kwargs: Any) -> None:
-            return
+        def __getattr__(self, name: str):
+            # Any attribute lookup returns a no-op callable.
+            return lambda *a, **kw: None
 
     monkeypatch.setattr(ui, "console", _NullConsole())
 
