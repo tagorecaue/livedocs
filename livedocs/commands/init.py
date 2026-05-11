@@ -111,13 +111,15 @@ def run_init(cwd: Path) -> int:
             return 130
         docs_dir = picked.strip() or "docs"
 
-    # 6. Graphify
+    # 6. Graphify — COMMENTED OUT pending real integration (would be misleading
+    # to ask: cfg.use_graphify is detected but never consumed downstream).
+    # Re-enable when `livedocs scan` exists and the prompt actually uses the graph.
     use_graphify = False
-    if detect.has_graphify():
-        ui.blank()
-        ui.info(t("init_graphify_detected"))
-        ans = ui.ask_confirm(t("init_graphify_q"), default=False)
-        use_graphify = bool(ans)
+    # if detect.has_graphify():
+    #     ui.blank()
+    #     ui.info(t("init_graphify_detected"))
+    #     ans = ui.ask_confirm(t("init_graphify_q"), default=False)
+    #     use_graphify = bool(ans)
 
     # 6.5. Style (new in v0.2 D.0)
     from livedocs.skill.styles import (
