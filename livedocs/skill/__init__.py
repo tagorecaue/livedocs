@@ -1,20 +1,44 @@
-"""Embedded skill — system prompt + prompt templates.
+"""LiveDocs skill — embedded prompts that drive the agent (Claude Code).
 
-This is the v0 distilled essence of the `living-docs-from-graph` skill,
-adapted for a CLI-driven (rather than agent-driven) workflow.
+# Two layers
 
-The CLI calls the agent with structured prompts; the agent never decides
-"what to do next" — that's the CLI's job. The agent's job is:
-  1) Read code and produce structured questions
-  2) Detect when a new answer covers other pending questions
-  3) Detect contradictions between answers and code
-  4) Generate v1 markdown (produto + tech) at the end
+## 1. System prompt (LIVEDOCS_SYSTEM_PROMPT)
+
+Sent on every call via `--append-system-prompt`. Establishes:
+  - Role (executor, not orchestrator)
+  - Output discipline (strict JSON when asked)
+  - Voice (narrative prose, mark hypotheses with 🟡)
+  - Guardrails (no jargon in produto, evidence-based claims)
+
+## 2. Per-task prompts (one per agent-call site in the CLI)
+
+Each prompt is a Python f-string template imported by the call site.
+The CLI fills in slug/domain/lang/context and passes the result to ClaudeAgent.
+
+Phase A→B prompt map:
+
+  | CLI step                       | Prompt                          | New in |
+  | ------------------------------ | ------------------------------- | ------ |
+  | livedocs new (free-text intent)| PROMPT_PARSE_INTENT             | v0.2   |
+  | Skeleton build                 | PROMPT_BUILD_SKELETON           | v0.2   |
+  | Reflect after each answer      | PROMPT_REFLECT_ON_ANSWER        | v0.2   |
+  | Pre-generation self-audit      | PROMPT_PREGEN_SELF_AUDIT        | v0.2   |
+  | Generate v1 paired guides      | PROMPT_GENERATE_GUIDES          | rewritten v0.2 |
+  | Post-gen eval — clarity        | PROMPT_EVAL_PRODUCT_CLARITY     | v0.2   |
+  | Post-gen eval — completeness   | PROMPT_EVAL_TECH_COMPLETENESS   | v0.2   |
+  | Post-gen eval — coherence      | PROMPT_EVAL_BASE_COHERENCE      | v0.2   |
+  | Reverse-link sweep (cross-base)| PROMPT_REVERSE_LINK_SWEEP       | v0.2   |
+
+The old v0.1 prompts (PROMPT_GENERATE_INTERVIEW, PROMPT_COVERAGE_CHECK) stay
+defined for legacy-import compatibility, but the new CLI flow does not use them.
 """
 
 from __future__ import annotations
 
-# The base system prompt that every agent call receives.
-# Format-string with {lang} that the agent receives at runtime.
+# =============================================================================
+# SYSTEM PROMPT
+# =============================================================================
+
 LIVEDOCS_SYSTEM_PROMPT = """\
 You are the agent powering **LiveDocs**, a CLI tool that builds *living documentation*
 for software projects via guided interviews with the developer.
@@ -45,32 +69,578 @@ expected output (often JSON). Stick to what's asked.
 - For "produto" guides: zero technical jargon (no column names, no function names).
 - For "tech" guides: technical detail welcome, with `file:line` references.
 
+# Evidence-first principle
+
+Every claim a guide makes MUST be backed by either:
+  - code evidence (`file:line` or `file:start-end`), or
+  - user-confirmed answer (interview answer id), or
+  - inheritance from another guide of the same flavor (slug)
+
+Claims without grounding go into "Pendências e melhorias mapeadas" of the tech
+guide marked with 🟡, NEVER into the product guide as if they were known.
+
+# Fact-driven model
+
+The CLI now maintains a list of `Fact` records — atomic units of knowledge the
+guide must establish. Each fact has:
+
+  - `kind`: trigger | invariant | edge_case | terminology | flow | value | actor | ui_surface
+  - `confidence`: none | low | medium | high
+  - `priority`:
+      - established: evidence is strong → will become an assertion automatically
+      - needs-confirmation: evidence exists but ambiguous → ASK the user
+      - hypothesis-with-trace: weak evidence → goes to Pendências with 🟡
+      - speculation: NO evidence, only intuition → only category that can be silenced
+  - `status`: open | hypothesized | confirmed | contradicted | resolved
+  - `evidence[]`: list of {kind, ref, note}
+
+When you build the skeleton, you classify each fact. The CLI uses the priority
+to decide which facts become interview questions and which become assertions.
+
 # What you can/should do
 
-- Read the user's repository to understand structure (use available file/search tools).
-- Cross-check user answers against the actual code.
-- Detect when one answer covers other pending questions.
-- Generate paired guides: `<slug>.md` (produto) + `<slug>.tech.md` (tech).
-- Generate the interview file at `<docs_dir>/<domain>/_meta/<slug>.interview.md`.
+- Read the user's repository (Read, Glob, Grep tools).
+- Cross-check user answers against code in real time.
+- Generate `Fact` records with explicit evidence.
+- Write paired guides: `<slug>.md` (produto) + `<slug>.tech.md` (tech) +
+  `_meta/<slug>.interview.md`.
 
 # What you must NOT do
 
 - Don't decide which guide to write next — the CLI tells you.
-- Don't write commit messages or run git commands unless asked.
-- Don't include personal opinions about the codebase quality.
+- Don't run git commands.
 - Don't include technical jargon in `flavor: produto` files.
-- Don't mix the produto file and the tech file in cross-links.
-
-# Always
-
-- Ground claims in code (cite `file:line`).
-- Prefer leaving a 🟡 hypothesis to inventing facts.
-- Concise summary of what you did at the end.
+- Don't assert facts without evidence.
+- Don't return code-fenced JSON when JSON is requested.
 """
 
 
-# Prompt template: when starting a brand-new guide, ask the agent to generate
-# the initial v0 + interview questions.
+# =============================================================================
+# PHASE B — NEW PROMPTS
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# PARSE INTENT — free text → {slug, domain, title, is_new_domain}
+# -----------------------------------------------------------------------------
+
+PROMPT_PARSE_INTENT = """\
+# Task: Parse the user's free-text intent into structured guide metadata
+
+The user typed this description (in {lang}) of what they want to document:
+
+> {intent}
+
+## Existing domains in this project
+
+{existing_domains}
+
+## What to do
+
+1. Decide the **slug** (kebab-case, ASCII, ≤40 chars, matches what the guide is about).
+2. Decide the **domain** — prefer an existing one when it fits; otherwise propose a new domain slug.
+3. Decide the **title** (in {lang}, human-readable, ≤60 chars).
+4. Decide whether the domain is new (`is_new_domain: true`) or existing (`false`).
+5. If the intent is ambiguous (could mean 2+ different things), provide a one-line
+   `clarification_needed` describing what you'd ask. Otherwise leave it empty.
+
+## Output (STRICT JSON, no prose, no fences)
+
+{{
+  "slug": "kebab-case-slug",
+  "domain": "domain-name",
+  "title": "Human title in {lang}",
+  "is_new_domain": false,
+  "clarification_needed": ""
+}}
+"""
+
+
+# -----------------------------------------------------------------------------
+# BUILD SKELETON — read code, produce fact skeleton with auto-audit
+# -----------------------------------------------------------------------------
+
+PROMPT_BUILD_SKELETON = """\
+# Task: Build the fact skeleton for a new guide
+
+You are starting documentation work on this guide:
+
+- Slug: `{slug}`
+- Domain: `{domain}`
+- Title: `{title}`
+- Output language: **{lang}**
+- Repo root: `{repo_root}`
+- Docs directory: `{docs_dir}` (relative to repo root)
+- Existing guides in this project (slug + domain): {existing_guides_compact}
+
+## What to do
+
+### Step 1: Read the code
+
+Use Read/Glob/Grep tools to find files relevant to this topic. Spend 5–15 reads —
+enough to ground your skeleton in real code, not so many you drown in detail.
+
+### Step 2: Produce a Fact skeleton (target: 10–30 facts)
+
+For each fact:
+  - Assign an id (F1, F2, F3, ...).
+  - Choose `kind`: trigger | invariant | edge_case | terminology | flow | value | actor | ui_surface
+  - Write a one-sentence `text` claim in **{lang}**.
+  - Assess `confidence` based on what the code shows (none/low/medium/high).
+  - Pick `priority` per the principle:
+      * `established`: evidence in code is unambiguous. Will become an assertion.
+      * `needs-confirmation`: evidence exists but ambiguous (e.g., copy that might
+        be stale, transition that's done via cron but flag is unclear). ASK the user.
+      * `hypothesis-with-trace`: you spotted a possibility but evidence is weak.
+        Will go to Pendências with 🟡.
+      * `speculation`: NO evidence at all, pure intuition. Only category that can
+        be silenced. **Avoid abusing this — if you found anything in the code,
+        it is NOT speculation.**
+  - Set `status` accordingly:
+      * established / high confidence → `confirmed`
+      * needs-confirmation → `open`
+      * hypothesis-with-trace → `hypothesized`
+      * speculation → `open`
+  - Populate `evidence[]`:
+      * For established: at least one `{{kind: "code", ref: "file:line"}}` entry.
+      * For needs-confirmation: code ref + a note explaining why it's ambiguous.
+      * For hypothesis-with-trace: best available reference + note.
+      * For speculation: empty list.
+  - For needs-confirmation facts, write a `pending_question` field — the actual
+    question to ask the user in **{lang}**. Phrase it as "I see X in the code,
+    is Y still true?" rather than "what is X?".
+
+### Step 3: Auto-audit the skeleton
+
+Look at the skeleton you produced. Check:
+  - Coverage: do you have facts about the *outcome*, the *trigger*, *invariants*,
+    *edge cases*, *user vivência*? If a category is missing, ADD facts.
+  - Tema size: if the topic is huge (would need >40 facts), propose `should_split`
+    with 2-3 sub-slug suggestions.
+
+## Output (STRICT JSON, no prose, no fences)
+
+{{
+  "title": "Final title in {lang} (may refine the working title)",
+  "summary": "One-sentence summary in {lang}",
+  "source_files": [
+    "packages/api/src/billing/foo.ts",
+    "packages/db/migrations/000123.sql"
+  ],
+  "facts": [
+    {{
+      "id": "F1",
+      "kind": "trigger",
+      "text": "Claim in {lang}",
+      "confidence": "high",
+      "priority": "established",
+      "status": "confirmed",
+      "evidence": [{{"kind": "code", "ref": "packages/api/src/foo.ts:42-58", "note": ""}}],
+      "pending_question": null
+    }},
+    {{
+      "id": "F2",
+      "kind": "invariant",
+      "text": "Claim in {lang}",
+      "confidence": "low",
+      "priority": "needs-confirmation",
+      "status": "open",
+      "evidence": [{{"kind": "code", "ref": "packages/api/src/bar.ts:120", "note": "Code suggests X but not enforced"}}],
+      "pending_question": "Question in {lang}, framed as a confirmation"
+    }}
+  ],
+  "should_split": null
+}}
+
+`should_split`, when not null:
+  {{
+    "reason": "Why this topic is too big (in {lang})",
+    "suggested_slugs": ["sub-slug-1", "sub-slug-2"]
+  }}
+
+Output ONLY the JSON object.
+"""
+
+
+# -----------------------------------------------------------------------------
+# REFLECT ON ANSWER — cross-check, update facts, surface contradictions
+# -----------------------------------------------------------------------------
+
+PROMPT_REFLECT_ON_ANSWER = """\
+# Task: Reflect on the user's latest answer
+
+The user just answered the pending question for fact `{fact_id}`:
+
+**Fact text:** {fact_text}
+**Pending question:** {pending_question}
+**User answer:** {answer}
+
+## Current state of other facts (compact)
+
+{other_facts_compact}
+
+## What to do
+
+### Step 1: Cross-check with the code
+
+Use Read/Glob/Grep to verify the user's answer against what the code actually does.
+Look at the evidence already attached to this fact, expand if needed.
+
+### Step 2: Classify the outcome
+
+Pick ONE outcome:
+  - `confirmed`: user's answer matches code and is consistent. Fact is now resolved.
+  - `confirmed_with_correction`: user's answer is *mostly* right but you found a
+    nuance worth recording (e.g., they said "uses payment_date" but code shows
+    `due_date`). Include `correction_note` explaining the nuance, do NOT contradict
+    the user openly — frame as enrichment.
+  - `contradicted`: user's answer DIRECTLY conflicts with code. Surface this to the
+    user with the code reference. Include `contradiction_note` and `code_ref`.
+  - `needs_more`: answer is partial. Include `follow_up_question` in {lang}.
+
+### Step 3: Detect coverage of other facts
+
+Does this answer ALSO resolve other facts in the pending list (by topic, not just
+literal coincidence)? List their ids in `covers_other_facts`.
+
+### Step 4: Detect new facts that emerged
+
+Did the answer reveal a fact you didn't have in the skeleton? List them as
+`new_facts` with the same shape as in PROMPT_BUILD_SKELETON.
+
+## Output (STRICT JSON, no prose, no fences)
+
+{{
+  "outcome": "confirmed",
+  "correction_note": "",
+  "contradiction_note": "",
+  "code_ref": "",
+  "follow_up_question": "",
+  "covers_other_facts": ["F4", "F7"],
+  "new_facts": []
+}}
+
+Output ONLY the JSON.
+"""
+
+
+# -----------------------------------------------------------------------------
+# PRE-GENERATION SELF-AUDIT — every claim has evidence?
+# -----------------------------------------------------------------------------
+
+PROMPT_PREGEN_SELF_AUDIT = """\
+# Task: Self-audit before generating the guides
+
+You are about to write the v1 paired guides for `{slug}` (domain: `{domain}`).
+Before generating, list each claim you intend to put in the guides and identify
+those that lack solid evidence.
+
+## Facts at hand
+
+{facts_compact}
+
+## What to do
+
+For each fact:
+  - If `priority = established` and `status = confirmed` with code evidence: OK.
+  - If `priority = needs-confirmation` and `status = confirmed` (user answered): OK.
+  - If `priority = hypothesis-with-trace`: it must go to "Pendências" with 🟡, NOT
+    as an assertion. List it.
+  - If `priority = speculation` (no evidence): drop silently, not even in Pendências.
+  - If status is `contradicted`: skip it OR resolve it. Flag if unresolved.
+
+Also identify:
+  - Critical facts still `open` (priority = needs-confirmation, status = open) →
+    these should have been answered. List them under `still_open_critical`.
+
+## Output (STRICT JSON, no prose, no fences)
+
+{{
+  "ready_to_generate": true,
+  "assertions": [
+    {{"fact_id": "F1", "kind": "trigger", "summary": "...in {lang}", "evidence_summary": "..."}},
+    ...
+  ],
+  "pendencias": [
+    {{"fact_id": "F8", "summary": "...in {lang}", "reason": "weak evidence"}},
+    ...
+  ],
+  "still_open_critical": [],
+  "dropped_speculation": ["F12", "F13"]
+}}
+
+If `still_open_critical` is non-empty, set `ready_to_generate: false` and explain
+in `block_reason` what's missing.
+
+Output ONLY the JSON.
+"""
+
+
+# -----------------------------------------------------------------------------
+# GENERATE GUIDES — produce the v1 .md files (REWRITTEN for facts)
+# -----------------------------------------------------------------------------
+
+PROMPT_GENERATE_GUIDES = """\
+# Task: Write the v1 paired guides + interview record
+
+You have a confirmed set of facts about `{slug}` (domain: `{domain}`). Write
+three markdown files using your Write tool.
+
+- Output language: **{lang}**
+- Repo root: `{repo_root}`
+- Docs directory: `{docs_dir}` (relative to repo root)
+- Guides subdir: `{guides_subdir}` (when non-empty, paths become `{docs_dir}/{guides_subdir}/{domain}/...`)
+- Slug: `{slug}`
+- Title: `{title}`
+
+## Files to create
+
+1. **`{full_dir}/{slug}.md`** — `flavor: produto`
+   - Audience: end-user, support, product. NO technical jargon.
+   - 8 sections in order:
+     1. Por que isso existe (Why this exists)
+     2. Como o usuário vivencia (User experience)
+     3. Conceitos-chave (Key concepts)
+     4. Fluxos principais (Main flows — mermaid welcome)
+     5. Casos do dia a dia (Day-to-day cases)
+     6. Convivência com vizinhos (Neighbors interaction — when applicable)
+     7. Próximo guia (Next guide)
+     8. Veja também (See also)
+   - Front-matter:
+     ```yaml
+     ---
+     slug: {slug}
+     domain: {domain}
+     audience: ...
+     flavor: produto
+     source_files:
+       - ...
+     related_guides: []
+     last_interview: {today}
+     status: generated
+     confidence_summary: "X facts confirmed, Y hypothesis"
+     quality_score: 0.XX
+     ---
+     ```
+
+2. **`{full_dir}/{slug}.tech.md`** — `flavor: tecnico`
+   - Audience: dev, AI agent. Technical detail welcome.
+   - 8 sections:
+     1. Modelo de dados (Data model)
+     2. Pontos de entrada (Entry points)
+     3. Diagrama de transições (Transition diagram)
+     4. Regras invariantes (R1, R2, ... numbered, with `file:line`)
+     5. UI / cores / selos (UI / colors / badges)
+     6. Pendências e melhorias mapeadas (Known gaps — includes 🟡 hypotheses)
+     7. Material de referência (Reference material)
+     8. Veja também (See also — other tech.md only)
+   - Front-matter: same shape but `flavor: tecnico`.
+
+3. **`{full_dir}/_meta/{slug}.interview.md`** — Q&A record
+   - For each fact with `pending_question`, write:
+     ```markdown
+     **{{fact_id}}.** {{pending_question}}
+
+     **Resposta:**
+
+     {{answer}}
+
+     ---
+     ```
+
+## Facts (with evidence)
+
+{facts_full}
+
+## Rules
+
+- Every assertion in either guide must be traceable to a fact in the list above.
+- Facts with `priority: hypothesis-with-trace` go to Pendências section (tech),
+  prefixed with 🟡.
+- Facts with `priority: speculation` are SILENTLY DROPPED. They do not appear anywhere.
+- `confidence_summary` in front-matter: count facts by status (e.g., "18 facts
+  confirmed, 2 hypothesis, 1 open").
+- `quality_score`: precomputed value — use `{quality_score}`.
+
+## Output
+
+After writing the 3 files with your tools, return ONLY this JSON:
+
+{{
+  "files_written": [
+    "{full_dir}/{slug}.md",
+    "{full_dir}/{slug}.tech.md",
+    "{full_dir}/_meta/{slug}.interview.md"
+  ],
+  "summary": "One-paragraph summary in {lang}",
+  "next_recommendation": {{
+    "slug": "natural-next-slug",
+    "domain": "{domain}",
+    "reason": "Why this is the natural next step (in {lang})"
+  }}
+}}
+
+Output ONLY the JSON.
+"""
+
+
+# -----------------------------------------------------------------------------
+# POST-GENERATION EVALUATIONS (3 dimensions in Phase 1)
+# -----------------------------------------------------------------------------
+
+PROMPT_EVAL_PRODUCT_CLARITY = """\
+# Task: Evaluate the product-flavored guide for clarity
+
+You are reading **as an end-user of the SaaS** (or support agent, or product
+manager). You are NOT a developer.
+
+## File to evaluate
+
+Read `{produto_path}` carefully. Use your Read tool.
+
+## What to check
+
+For each issue you find, classify severity:
+
+- **blocker**: guide states something that contradicts the source code evidence
+  (you may need to spot-check). Must fix before publishing.
+- **evidence-based**: detectable problem grounded in something explicit:
+  jargon vazado from code, mention of a column/enum/function name, broken
+  cross-reference, missing front-matter field, narrative jump.
+- **subjective**: stylistic suggestion (tone too formal, paragraph too long,
+  better word choice). These are auto-fixable.
+
+## Output (STRICT JSON, no prose, no fences)
+
+{{
+  "summary": "One-line in {lang}",
+  "issues": [
+    {{
+      "id": "I1",
+      "severity": "evidence-based",
+      "message": "Guide cites 'commission_rate' (technical jargon). End-user wouldn't know that.",
+      "location": "{produto_path}:42",
+      "auto_fix_available": true,
+      "patch": "Substituir 'commission_rate' por 'taxa de comissão'."
+    }}
+  ]
+}}
+
+Output ONLY the JSON. Empty issues array if all clean.
+"""
+
+
+PROMPT_EVAL_TECH_COMPLETENESS = """\
+# Task: Evaluate the tech-flavored guide for completeness
+
+You are reading **as a developer new to this codebase**, who needs the guide
+to onboard them.
+
+## File to evaluate
+
+Read `{tech_path}`. Use your Read tool.
+
+## What to check
+
+- Invariants numbered (R1, R2, ...) — each with `file:line`?
+- Edge cases mentioned (rollback, race, timeout, concurrent edit)?
+- Diagram present where it'd help?
+- `source_files` in front-matter complete (10+ entries for non-trivial topics)?
+- Pendências section captures known gaps (🟡)?
+
+Same severity scheme as product evaluation.
+
+## Output (STRICT JSON, no prose, no fences)
+
+Same shape as PROMPT_EVAL_PRODUCT_CLARITY.
+
+Output ONLY the JSON. Empty issues array if all clean.
+"""
+
+
+PROMPT_EVAL_BASE_COHERENCE = """\
+# Task: Evaluate the new guide against the existing knowledge base
+
+You are checking whether this guide is consistent with what is already documented
+in the project.
+
+## Files to read
+
+- **New guide (produto)**: `{produto_path}`
+- **New guide (tech)**: `{tech_path}`
+- **Existing guides in the same flavor that may relate**:
+
+{related_guides_compact}
+
+- **Glossary** (if present): `{glossary_path}`
+
+## What to check
+
+- Terms diverging from the glossary (or worth adding to it)?
+- Affirmations that contradict an existing guide?
+- "Veja também" sections — does the new guide link to obvious related guides?
+- Reverse-link: would another guide benefit from citing this new one?
+
+Output same shape as the other evaluators. For reverse-link findings, use
+`type: "reverse_link_suggestion"` in the issue message — phase-1 CLI will
+funnel these to the inbox separately.
+
+Output ONLY the JSON.
+"""
+
+
+# -----------------------------------------------------------------------------
+# REVERSE-LINK SWEEP — after human approves, propose entries in other guides
+# -----------------------------------------------------------------------------
+
+PROMPT_REVERSE_LINK_SWEEP = """\
+# Task: Propose reverse cross-links
+
+The user just approved a new guide. Now you propose reverse links — entries
+to add in OTHER guides' "Veja também" sections so the base becomes
+bidirectionally navigable.
+
+## New guide
+
+- Slug: `{slug}`
+- Domain: `{domain}`
+- File (produto): `{produto_path}`
+- File (tech): `{tech_path}`
+
+## What to do
+
+Read the new guide's "Veja também" section. For each guide it cites:
+  - Read that target guide.
+  - Check whether the target already cites the new guide back.
+  - If not, propose a one-bullet entry to add to that target's "Veja também"
+    section, explaining (1 sentence) why the reader would visit the new guide.
+
+Only propose for guides of the **same flavor** (produto → produto, tech → tech).
+
+## Output (STRICT JSON, no prose, no fences)
+
+{{
+  "proposals": [
+    {{
+      "target_path": "guides/projetos/parceiros-do-projeto.md",
+      "target_slug": "parceiros-do-projeto",
+      "bullet": "- [Pagamento de Repasses](../financeiro/pagamento-de-repasses.md) — explica como as comissões definidas aqui são executadas no fluxo financeiro."
+    }}
+  ]
+}}
+
+Output ONLY the JSON. Empty proposals array if all reverse-links already exist.
+"""
+
+
+# =============================================================================
+# LEGACY (v0.1) PROMPTS — kept for backwards-compatible import only
+# =============================================================================
+#
+# The v0.1 CLI flow (interview.py) imports PROMPT_GENERATE_INTERVIEW and
+# PROMPT_COVERAGE_CHECK from this module. Phase B keeps them present so the
+# old code path still imports without breaking. Phase C removes the
+# legacy CLI flow and these can be deleted.
+
 PROMPT_GENERATE_INTERVIEW = """\
 # Task: Prepare initial interview for a new guide
 
@@ -81,166 +651,49 @@ You will help create a new guide for the LiveDocs project at `{repo_root}`.
 - Domain: `{domain}`
 - Title (working): `{title}`
 - Output language: **{lang}**
-- Docs directory: `{docs_dir}` (relative to repo root)
+- Docs directory: `{docs_dir}`
 
-## What to do now
+This prompt is DEPRECATED — use PROMPT_BUILD_SKELETON instead.
 
-1. **Explore the codebase** to find files most likely related to this guide
-   (use grep/glob/file tools). Spend at most ~10 reads — don't go deep.
-2. **Generate ~20 interview questions** organized in blocks:
-   - A: Product meaning (what does the concept mean for the business?)
-   - B: Transitions and triggers (who triggers what?)
-   - C: Invariant rules (what must NEVER happen?)
-   - D: User experience and support (top doubts, UX edge cases)
-   - E: Boundaries the code suggests but doesn't confirm (race conditions, rollbacks)
-   - F: Direction of the guide (depth, next guide, what's missing)
-3. Each question should be specific, answerable, and grounded in something you saw
-   in the code (or honestly marked as "I couldn't tell from the code").
+## Output format
 
-## Output format (STRICT JSON, no prose, no fences)
-
-```
 {{
-  "title": "Final title for the guide (in {lang})",
-  "summary": "One-sentence summary of what this guide will cover (in {lang})",
-  "source_files": ["path/to/file1.ts", "path/to/file2.sql"],
+  "title": "...",
+  "summary": "...",
+  "source_files": [],
   "blocks": [
-    {{
-      "id": "A",
-      "topic": "Product meaning",
-      "questions": [
-        {{"id": "A1", "text": "Question in {lang}…"}},
-        {{"id": "A2", "text": "…"}}
-      ]
-    }}
+    {{"id": "A", "topic": "...", "questions": [{{"id": "A1", "text": "..."}}]}}
   ]
 }}
-```
-
-Block topics MUST be translated into {lang}. Question IDs stay as A1, A2, B1, etc.
-Output ONLY the JSON object. Nothing else.
 """
 
 
-# Prompt: after each user answer, check if it covers other pending questions
 PROMPT_COVERAGE_CHECK = """\
 # Task: Did this answer cover other pending questions?
+
+DEPRECATED — use PROMPT_REFLECT_ON_ANSWER instead.
 
 The user just answered question `{question_id}` ("{question_text}") with:
 
 > {answer}
 
-## Pending questions (still unanswered)
+## Pending questions
 
 {pending_block}
 
-## What to do
-
-Check if the user's answer FULLY covers any of the pending questions above.
-"Fully" means: the answer contains explicit information that resolves the
-question without requiring another follow-up.
-
 ## Output (STRICT JSON, no prose, no fences)
 
-```
-{{
-  "covered": ["A2", "B5"],
-  "partial": [{{"id": "A4", "missing": "still unclear about X"}}]
-}}
-```
-
-If nothing is covered, return `{{"covered": [], "partial": []}}`.
-"""
-
-
-# Prompt: after all questions answered, write the v1 paired guides
-PROMPT_GENERATE_GUIDES = """\
-# Task: Write the v1 paired guides
-
-The interview is complete. Write two paired markdown guides + the interview record.
-
-## Guide info
-- Slug: `{slug}`
-- Domain: `{domain}`
-- Title: `{title}`
-- Output language: **{lang}**
-- Docs directory: `{docs_dir}` (relative to {repo_root})
-- Source files (informed during interview): {source_files}
-
-## Files to create (use your file-write tools)
-
-1. **`{docs_dir}/{domain}/{slug}.md`** — `flavor: produto`
-   - 8 sections: Por que existe / Como o usuário vivencia / Conceitos-chave /
-     Fluxos / Casos do dia a dia / Convivência com vizinhos / Próximo guia /
-     Veja também
-   - Zero technical jargon. Business language only.
-   - Front-matter with: slug, domain, audience, flavor=produto, source_files,
-     status=generated, last_interview=today
-2. **`{docs_dir}/{domain}/{slug}.tech.md`** — `flavor: tecnico`
-   - 8 sections: Modelo de dados / Pontos de entrada / Diagrama de transições /
-     Regras invariantes (R1, R2, …) / UI cores selos / Pendências / Material
-     de referência / Veja também
-   - Technical detail welcome. Cite `file:line`.
-   - Front-matter with: slug, domain, audience, flavor=tecnico, source_files,
-     status=generated, last_interview=today
-3. **`{docs_dir}/{domain}/_meta/{slug}.interview.md`** — Q&A record
-   - Standard `**Resposta:**` inline + `---` separator format
-
-## Interview answers
-
-{answers_block}
-
-## Output format
-
-After writing the files with your tools, return ONLY this JSON:
-
-```
-{{
-  "files_written": ["docs/foo/bar.md", "docs/foo/bar.tech.md", "docs/foo/_meta/bar.interview.md"],
-  "summary": "One-paragraph summary of what was generated (in {lang})",
-  "next_recommendation": {{
-    "slug": "kebab-suggested-next",
-    "domain": "domain-name-or-new",
-    "reason": "Why this is the natural next step (in {lang})"
-  }}
-}}
-```
+{{"covered": [], "partial": []}}
 """
 
 
 PROMPT_DETECT_DOMAINS = """\
 # Task: Suggest documentation domains for this codebase
 
-The user wants to bootstrap LiveDocs in their repository at `{repo_root}`.
-{graph_hint}
+DEPRECATED — use PROMPT_PARSE_INTENT with the user's free-text and existing
+domains list to drive guide selection now.
 
-Explore the repo briefly (read package.json, top-level dirs, READMEs, a handful
-of source files). Identify candidate **domains** — coherent functional areas
-that deserve their own guide cluster.
+Output (STRICT JSON):
 
-Examples of good domains: "billing", "contracts", "user-onboarding",
-"notifications", "admin-panel", "search". Bad domains: too granular ("login-button"),
-too broad ("backend").
-
-## Output (STRICT JSON, no prose, no fences)
-
-```
-{{
-  "domains": [
-    {{
-      "slug": "billing",
-      "title": "Billing (in {lang})",
-      "rationale": "Why this is a domain (in {lang}, 1 sentence)",
-      "key_files": ["packages/api/src/billing/", "packages/db/migrations/00X.sql"],
-      "suggested_guides": [
-        {{"slug": "billing-cycle", "title": "Billing cycle (in {lang})"}},
-        {{"slug": "invoice-generation", "title": "Invoice generation (in {lang})"}}
-      ]
-    }}
-  ]
-}}
-```
-
-Suggest 3-7 domains, each with 1-3 suggested guides. Translate titles/rationales
-to {lang}.
+{{"domains": []}}
 """
