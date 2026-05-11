@@ -145,11 +145,11 @@ def parse_next_recommendation(index_path: Path) -> dict | None:
     if link:
         target = link.group(2)
         slug = Path(target).stem.replace(".tech", "")
-        return {"slug": slug, "reason": body[:500].strip()}
+        return {"slug": slug, "reason": body.strip()}
 
     inline_code = re.search(r"`([a-z0-9][\w-]+?)(?:\.md)?`", body)
     if inline_code:
-        return {"slug": inline_code.group(1), "reason": body[:500].strip()}
+        return {"slug": inline_code.group(1), "reason": body.strip()}
 
     return None
 
