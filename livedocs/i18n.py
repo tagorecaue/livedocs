@@ -40,6 +40,10 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Rode [bold]livedocs init[/bold] para começar.",
         "en": "Run [bold]livedocs init[/bold] to get started.",
     },
+    "no_project_init_q": {
+        "pt-BR": "Quer inicializar o LiveDocs neste diretório agora?",
+        "en": "Initialize LiveDocs in this directory now?",
+    },
     "where_we_left": {
         "pt-BR": "Onde paramos",
         "en": "Where we left off",

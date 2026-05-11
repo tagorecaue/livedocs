@@ -22,18 +22,12 @@ from livedocs.state import load_config, load_state
 
 def run_root(repo_root: Path | None) -> int:
     """No subcommand path. Detects state and offers next step."""
-    if repo_root is None:
-        ui.splash()
-        ui.warn(t("no_project_title"))
-        ui.hint(t("no_project_hint"))
-        return 0
+    cwd = Path.cwd()
+    if repo_root is None or load_config(repo_root) is None:
+        return _offer_init(cwd)
 
     cfg = load_config(repo_root)
-    if cfg is None:
-        ui.splash()
-        ui.warn(t("no_project_title"))
-        ui.hint(t("no_project_hint"))
-        return 0
+    assert cfg is not None  # narrowed by the check above
 
     set_lang(cfg.lang)
     ui.splash()
@@ -145,6 +139,28 @@ def run_root(repo_root: Path | None) -> int:
         return run_new(repo_root, slug=slug, domain=domain)
 
     return 0
+
+
+def _offer_init(cwd: Path) -> int:
+    """When no project is configured here, ask if the user wants to initialize.
+
+    Replaces the previous behavior of just printing an error and exiting.
+    Saves the user a step when they run `livedocs` in a fresh repo.
+    """
+    ui.splash()
+    ui.warn(t("no_project_title"))
+    try:
+        confirmed = ui.ask_confirm(t("no_project_init_q"), default=True)
+    except ui.NonInteractiveError:
+        # Non-interactive mode: fall back to the old hint and exit cleanly.
+        ui.hint(t("no_project_hint"))
+        return 0
+
+    if not confirmed:
+        ui.hint(t("no_project_hint"))
+        return 0
+
+    return run_init(cwd)
 
 
 def run_init_entry(cwd: Path) -> int:
