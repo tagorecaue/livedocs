@@ -117,18 +117,10 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Rode [bold]livedocs[/bold] (sem argumentos) e eu te guio a partir daqui.",
         "en": "Run [bold]livedocs[/bold] (no args) and I'll guide you from there.",
     },
-    # ---- intent ("documentação completa" vs "por partes") ----
+    # ---- free-text intent (rewritten for v0.2 fact-driven flow) ----
     "intent_q": {
-        "pt-BR": "Como você quer começar?",
-        "en": "How do you want to start?",
-    },
-    "intent_full": {
-        "pt-BR": "Documentação inicial completa (mapeio domínios e crio rascunhos pra refinar)",
-        "en": "Full initial pass (I'll map domains and create drafts for you to refine)",
-    },
-    "intent_one_by_one": {
-        "pt-BR": "Por partes (você escolhe um domínio/fluxo por vez)",
-        "en": "One by one (you pick one domain/flow at a time)",
+        "pt-BR": "O que você quer documentar?",
+        "en": "What do you want to document?",
     },
     # ---- new guide ----
     "new_slug_q": {
@@ -308,6 +300,109 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Slug [bold]{slug}[/bold] não encontrado.",
         "en": "Slug [bold]{slug}[/bold] not found.",
     },
+    # ---- v0.2 — Adaptive interview (fact-driven) — only the NEW keys.
+    # Keys reused from v0.1 (intent_q, interview_*) are NOT redefined.
+    "intent_hint": {
+        "pt-BR": "Ex.: \"a tela de pagamento de repasses do menu financeiro\"",
+        "en": "E.g.: \"the payment routing screen in the finance menu\"",
+    },
+    "intent_parsing": {
+        "pt-BR": "Interpretando sua intenção",
+        "en": "Parsing your intent",
+    },
+    "intent_parse_failed": {
+        "pt-BR": "Não consegui interpretar a descrição. Tente reformular ou usar [bold]--slug[/bold]/[bold]--domain[/bold].",
+        "en": "Could not parse the description. Try rephrasing or use [bold]--slug[/bold]/[bold]--domain[/bold].",
+    },
+    "intent_review_q": {
+        "pt-BR": "Vou documentar [bold]{title}[/bold] (slug=[accent]{slug}[/accent], domínio=[accent]{domain}[/accent]). Confirma?",
+        "en": "I'll document [bold]{title}[/bold] (slug=[accent]{slug}[/accent], domain=[accent]{domain}[/accent]). Confirm?",
+    },
+    "intent_new_domain": {
+        "pt-BR": "[brand]Domínio novo[/brand] — vou criar.",
+        "en": "[brand]New domain[/brand] — will be created.",
+    },
+    "intent_clarification": {
+        "pt-BR": "Pergunta de esclarecimento da IA: {q}",
+        "en": "Agent clarification needed: {q}",
+    },
+    "intent_edit_slug_q": {
+        "pt-BR": "Slug (kebab-case)",
+        "en": "Slug (kebab-case)",
+    },
+    "intent_edit_domain_q": {
+        "pt-BR": "Domínio",
+        "en": "Domain",
+    },
+    "intent_edit_title_q": {
+        "pt-BR": "Título",
+        "en": "Title",
+    },
+    "skeleton_building": {
+        "pt-BR": "Lendo o código e montando esqueleto de fatos para [bold]{slug}[/bold]",
+        "en": "Reading code and building fact skeleton for [bold]{slug}[/bold]",
+    },
+    "skeleton_thinking": {
+        "pt-BR": "Mapeando fatos e evidências",
+        "en": "Mapping facts and evidence",
+    },
+    "skeleton_failed": {
+        "pt-BR": "Falha ao montar o esqueleto. O agente não retornou JSON válido.",
+        "en": "Failed to build skeleton. The agent did not return valid JSON.",
+    },
+    "skeleton_ready": {
+        "pt-BR": "{total} fato(s) mapeado(s) · [ok]{confirmed} confirmados[/ok] · [warn]{pending} a confirmar[/warn] · [muted]{hypothesized} hipóteses[/muted]",
+        "en": "{total} fact(s) mapped · [ok]{confirmed} confirmed[/ok] · [warn]{pending} to confirm[/warn] · [muted]{hypothesized} hypotheses[/muted]",
+    },
+    "skeleton_split_suggested": {
+        "pt-BR": "O tema parece grande. Sugiro dividir em guias menores antes de prosseguir.",
+        "en": "The topic looks big. I suggest splitting it into smaller guides before continuing.",
+    },
+    "skeleton_split_hint": {
+        "pt-BR": "(Vou continuar com este tema agora. Se preferir dividir, pause com /sair e refaça.)",
+        "en": "(I'll continue with this topic. If you prefer to split, pause with /exit and redo.)",
+    },
+    "reflect_thinking": {
+        "pt-BR": "Conferindo no código",
+        "en": "Cross-checking with code",
+    },
+    "reflect_skipped": {
+        "pt-BR": "Cross-check ignorado",
+        "en": "Cross-check skipped",
+    },
+    "reflect_corrected": {
+        "pt-BR": "Cruzando com o código, achei uma nuance:",
+        "en": "Cross-checking the code, I found a nuance:",
+    },
+    "reflect_contradiction": {
+        "pt-BR": "Achei uma divergência entre sua resposta e o código.",
+        "en": "I found a divergence between your answer and the code.",
+    },
+    "reflect_contradiction_hint": {
+        "pt-BR": "Vou registrar como [bold]contradicted[/bold]. Você pode revisar/editar o guia depois.",
+        "en": "I'll record this as [bold]contradicted[/bold]. You can review/edit the guide later.",
+    },
+    "reflect_covered_others": {
+        "pt-BR": "Sua resposta também cobriu: {ids}",
+        "en": "Your answer also covered: {ids}",
+    },
+    "reflect_new_facts": {
+        "pt-BR": "Apareceram {n} fato(s) novo(s) durante essa resposta — adicionados ao esqueleto.",
+        "en": "{n} new fact(s) emerged from your answer — added to the skeleton.",
+    },
+    "pregen_audit": {
+        "pt-BR": "Auditando evidências antes de gerar",
+        "en": "Auditing evidence before generation",
+    },
+    # ---- Fact kinds (translated labels for UI) ----
+    "fact_kind_trigger": {"pt-BR": "gatilho", "en": "trigger"},
+    "fact_kind_invariant": {"pt-BR": "invariante", "en": "invariant"},
+    "fact_kind_edge_case": {"pt-BR": "edge case", "en": "edge case"},
+    "fact_kind_terminology": {"pt-BR": "terminologia", "en": "terminology"},
+    "fact_kind_flow": {"pt-BR": "fluxo", "en": "flow"},
+    "fact_kind_value": {"pt-BR": "valor", "en": "value"},
+    "fact_kind_actor": {"pt-BR": "ator", "en": "actor"},
+    "fact_kind_ui_surface": {"pt-BR": "tela/UI", "en": "UI surface"},
 }
 
 
@@ -355,12 +450,17 @@ def get_lang() -> Lang:
     return _active_lang
 
 
-def t(key: str, **kwargs: object) -> str:
-    """Translate a key using the active language. Falls back to en, then to the key itself."""
+def t(key: str, *, default_: str | None = None, **kwargs: object) -> str:
+    """Translate a key using the active language. Falls back to default_/en/key.
+
+    `default_` (trailing underscore avoids colliding with `default` format args)
+    is used when the key is not in the STRINGS dict — useful for kinds/labels
+    that may not need translation.
+    """
     entry = STRINGS.get(key)
     if not entry:
-        return key  # fail open: untranslated literal shows up as itself
-    s = entry.get(_active_lang) or entry.get("en") or key
+        return default_ if default_ is not None else key
+    s = entry.get(_active_lang) or entry.get("en") or default_ or key
     if kwargs:
         with contextlib.suppress(KeyError, IndexError):
             s = s.format(**kwargs)

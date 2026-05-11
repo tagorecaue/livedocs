@@ -1,113 +1,143 @@
-"""Interview orchestrator — drives the question/answer loop.
+"""Interview orchestrator — fact-driven adaptive flow (v0.2).
 
-Each turn:
-  1. Show the next pending question
-  2. Get user's answer (or skip / pause / open-editor)
-  3. Send to agent for coverage check (does this answer also cover others?)
-  4. Update state on disk after every answer (so Ctrl-C is safe)
-  5. When all questions answered/skipped → trigger generate-guides
+The CLI drives, the agent executes. Each turn:
+
+  1. Show user the fact that needs confirmation (pending question rendered in {lang})
+  2. Get user's answer (or skip / pause)
+  3. Send to agent for reflection: cross-check with code, detect coverage of
+     other facts, propose new facts that emerged
+  4. Update Fact records; persist state.toml after every meaningful change
+
+When all facts critical/high are resolved, run pre-generation self-audit, then
+the generate-guides prompt. The CLI keeps the loop tight — no batched questions,
+no rigid 20-question script.
 
 State invariants:
-  - state.toml is rewritten after every meaningful change
-  - We never commit anything; the user owns git ops
-  - Skips are NOT failures — they go in the interview record as "skipped"
+  - state.toml rewritten after every meaningful change
+  - Skips never lose info — they go into the interview record with their status
+  - Speculation facts are silently dropped at generation time
+  - Hypothesis-with-trace facts go to Pendências in the .tech.md
 """
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from livedocs import ui
-from livedocs.agent import AgentError, ClaudeAgent
+from livedocs.agent import AgentError, AgentResult, ClaudeAgent
 from livedocs.i18n import t
 from livedocs.skill import (
-    PROMPT_COVERAGE_CHECK,
+    PROMPT_BUILD_SKELETON,
     PROMPT_GENERATE_GUIDES,
-    PROMPT_GENERATE_INTERVIEW,
+    PROMPT_PARSE_INTENT,
+    PROMPT_PREGEN_SELF_AUDIT,
+    PROMPT_REFLECT_ON_ANSWER,
 )
 from livedocs.state import (
+    Evidence,
+    Fact,
     GlobalState,
     InterviewState,
     NextRecommendation,
     ProjectConfig,
-    QuestionState,
+    guides_root,
     save_state,
 )
 
+# ---------------------------------------------------------------------------
+# Constants — interactive sentinel tokens
+# ---------------------------------------------------------------------------
+
+PAUSE_TOKENS = {"/sair", "/exit", "/quit", "/q", "/pause", "/pausar"}
 SKIP_TOKENS = {"/skip", "/pular", "/pula"}
-PAUSE_TOKENS = {"/sair", "/exit", "/quit", "/q"}
-EDITOR_TOKENS = {"/editor", "/edit", "/e"}
 
 
-def _track_cost(interview: InterviewState, result) -> None:
-    """Accumulate cost/duration/call-count from an AgentResult into the interview.
+# ---------------------------------------------------------------------------
+# Prompt rendering — we use a tiny safe-substitution helper instead of
+# str.format() because the prompts contain literal `{...}` JSON examples
+# that str.format would interpret as fields and crash with KeyError.
+# ---------------------------------------------------------------------------
 
-    Centralized so cost tracking stays consistent across start_new_interview,
-    _check_coverage, generate_guides and any future call site.
+def _render_prompt(template: str, **kwargs: object) -> str:
+    """Replace ${name} or {name} placeholders with provided kwargs.
+
+    Only substitutes the keys explicitly passed; any leftover `{foo}` in the
+    template stays as-is (which is what we want for embedded JSON examples).
     """
+    out = template
+    for key, value in kwargs.items():
+        out = out.replace("{" + key + "}", str(value))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Cost tracking helper
+# ---------------------------------------------------------------------------
+
+def _track_cost(interview: InterviewState, result: AgentResult) -> None:
+    """Accumulate cost/duration/call-count from any AgentResult."""
     interview.total_cost_usd += float(result.cost_usd or 0.0)
     interview.total_duration_ms += int(result.duration_ms or 0)
     interview.agent_calls += 1
 
 
 # ---------------------------------------------------------------------------
-# Non-interactive helpers (issue #1) — feed answers from a YAML file.
+# Phase C1 — Parse user's free-text intent into structured metadata
 # ---------------------------------------------------------------------------
 
-def apply_answers_file(
+def parse_intent(
     repo_root: Path,
-    global_state: GlobalState,
-    interview: InterviewState,
-    path: Path,
-) -> tuple[int, int, list[str]]:
-    """Apply answers from a YAML file directly onto the interview.
+    cfg: ProjectConfig,
+    intent_text: str,
+    existing_domains: list[str],
+) -> dict[str, Any] | None:
+    """Ask the agent to extract {slug, domain, title, is_new_domain} from free text.
 
-    YAML shape:
-        A1: "Answer text"
-        A2: skip          # or null/None — marks the question as skipped
-        B1: "..."
-
-    Returns (n_answered, n_skipped, unknown_ids). Unknown ids are reported
-    so a typo doesn't fail silently.
+    Returns the parsed dict, or None on failure (UI already reported).
     """
-    import yaml as _yaml
+    agent = ClaudeAgent(repo_root, lang=cfg.lang)
 
-    if not path.exists():
-        raise FileNotFoundError(f"answers file not found: {path}")
+    domains_block = (
+        "\n".join(f"- {d}" for d in existing_domains)
+        if existing_domains
+        else "(none yet — the project has no documented domains)"
+    )
+    prompt = _render_prompt(PROMPT_PARSE_INTENT,
+        intent=intent_text.strip(),
+        existing_domains=domains_block,
+        lang=cfg.lang,
+    )
 
-    raw = _yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(raw, dict):
-        raise ValueError(f"answers file must be a YAML mapping qid → answer, got {type(raw).__name__}")
+    try:
+        with ui.spinner(t("intent_parsing")):
+            result = agent.call(prompt, expect_json=True, timeout=60)
+    except AgentError as e:
+        ui.error(str(e))
+        return None
 
-    by_id = {q.id: q for q in interview.questions}
-    now = datetime.now().isoformat(timespec="seconds")
-    n_answered = 0
-    n_skipped = 0
-    unknown: list[str] = []
+    if result.is_error or not isinstance(result.json_data, dict):
+        ui.error(t("intent_parse_failed"))
+        if result.text:
+            ui.hint(result.text[:300])
+        return None
 
-    for qid, value in raw.items():
-        qid = str(qid)
-        q = by_id.get(qid)
-        if q is None:
-            unknown.append(qid)
-            continue
-        if value is None or (isinstance(value, str) and value.strip().lower() in {"skip", "/skip", "pular"}):
-            q.skipped = True
-            q.answered_at = now
-            n_skipped += 1
-        else:
-            q.answer = str(value).strip()
-            q.answered_at = now
-            n_answered += 1
-
-    interview.last_touched_at = now
-    global_state.last_touched_slug = interview.slug
-    save_state(repo_root, global_state)
-    return n_answered, n_skipped, unknown
+    data = result.json_data
+    # Basic shape validation
+    required = ("slug", "domain", "title")
+    if not all(k in data and data[k] for k in required):
+        ui.error(t("intent_parse_failed"))
+        return None
+    return data
 
 
-def start_new_interview(
+# ---------------------------------------------------------------------------
+# Phase C2 — Build the fact skeleton (replaces start_new_interview)
+# ---------------------------------------------------------------------------
+
+def build_skeleton(
     repo_root: Path,
     cfg: ProjectConfig,
     global_state: GlobalState,
@@ -115,60 +145,67 @@ def start_new_interview(
     slug: str,
     domain: str,
     title: str,
+    intent_text: str = "",
 ) -> InterviewState | None:
-    """Ask the agent to prepare ~20 questions; persist as InterviewState."""
+    """Build the initial Fact skeleton for a brand-new interview."""
     agent = ClaudeAgent(repo_root, lang=cfg.lang)
 
-    ui.blank()
-    ui.info(t("interview_starting", slug=slug))
+    existing_compact = "\n".join(
+        f"- {s} ({iv.domain}) [{iv.status}]"
+        for s, iv in sorted(global_state.interviews.items())
+    ) or "(none)"
 
-    prompt = PROMPT_GENERATE_INTERVIEW.format(
-        repo_root=str(repo_root),
+    prompt = _render_prompt(PROMPT_BUILD_SKELETON,
         slug=slug,
         domain=domain,
-        title=title or slug,
+        title=title,
         lang=cfg.lang,
+        repo_root=str(repo_root),
         docs_dir=cfg.docs_dir,
+        existing_guides_compact=existing_compact,
     )
 
+    ui.blank()
+    ui.info(t("skeleton_building", slug=slug))
+
     try:
-        with ui.spinner(t("interview_thinking")):
-            result = agent.call(prompt, expect_json=True, timeout=420)
+        with ui.spinner(t("skeleton_thinking")):
+            result = agent.call(prompt, expect_json=True, timeout=480)
     except AgentError as e:
         ui.error(str(e))
         return None
 
-    if result.is_error or not result.json_data:
-        ui.error("Agent did not return valid JSON for the interview prep.")
+    if result.is_error or not isinstance(result.json_data, dict):
+        ui.error(t("skeleton_failed"))
         if result.text:
             ui.hint(result.text[:500])
         return None
 
     data = result.json_data
-    if not isinstance(data, dict) or "blocks" not in data:
-        ui.error("Agent response shape unexpected (missing 'blocks').")
+    raw_facts = data.get("facts") or []
+    if not isinstance(raw_facts, list) or not raw_facts:
+        ui.error(t("skeleton_failed"))
         return None
 
-    questions: list[QuestionState] = []
-    for block in data.get("blocks", []):
-        block_id = block.get("id", "?")
-        block_topic = block.get("topic", "")
-        for q in block.get("questions", []):
-            questions.append(
-                QuestionState(
-                    id=q.get("id", f"{block_id}?"),
-                    block=block_id,
-                    block_topic=block_topic,
-                    text=q.get("text", ""),
-                )
-            )
+    facts: list[Fact] = []
+    for raw in raw_facts:
+        try:
+            facts.append(_fact_from_raw(raw))
+        except Exception as e:  # pragma: no cover (defensive)
+            ui.warn(f"Ignoring malformed fact: {e}")
+            continue
+
+    if not facts:
+        ui.error(t("skeleton_failed"))
+        return None
 
     interview = InterviewState(
         slug=slug,
         domain=domain,
-        title=data.get("title", title or slug),
-        questions=questions,
-        # Cost from the very first call (interview prep) accounted for here (#3).
+        title=data.get("title", title),
+        facts=facts,
+        source_files=[s for s in (data.get("source_files") or []) if isinstance(s, str)],
+        original_intent=intent_text,
         total_cost_usd=float(result.cost_usd or 0.0),
         total_duration_ms=int(result.duration_ms or 0),
         agent_calls=1,
@@ -177,146 +214,331 @@ def start_new_interview(
     global_state.last_touched_slug = slug
     save_state(repo_root, global_state)
 
-    ui.success(f"{len(questions)} {('perguntas preparadas' if cfg.lang == 'pt-BR' else 'questions ready')}")
+    # Handle should_split suggestion
+    should_split = data.get("should_split")
+    if isinstance(should_split, dict) and should_split.get("suggested_slugs"):
+        ui.blank()
+        ui.warn(t("skeleton_split_suggested"))
+        ui.console.print(f"  [muted]{should_split.get('reason', '')}[/muted]")
+        ui.console.print(f"  [muted]Sugestões: {', '.join(should_split['suggested_slugs'])}[/muted]")
+        ui.hint(t("skeleton_split_hint"))
+
+    # Quick summary
+    summary = _facts_summary(facts)
+    ui.success(
+        t(
+            "skeleton_ready",
+            total=summary["total"],
+            confirmed=summary["confirmed"],
+            pending=summary["pending"],
+            hypothesized=summary["hypothesized"],
+        )
+    )
     return interview
 
 
-def run_interview_loop(
+def _fact_from_raw(raw: dict) -> Fact:
+    """Coerce loose JSON from the agent into a strict Fact model."""
+    evidence_raw = raw.get("evidence") or []
+    evidence: list[Evidence] = []
+    for e in evidence_raw:
+        if not isinstance(e, dict):
+            continue
+        ek = e.get("kind", "hypothesis")
+        if ek not in ("code", "answer", "guide", "hypothesis"):
+            ek = "hypothesis"
+        evidence.append(Evidence(kind=ek, ref=str(e.get("ref", "")), note=str(e.get("note", ""))))
+
+    kind = raw.get("kind", "flow")
+    valid_kinds = {"trigger", "invariant", "edge_case", "terminology", "flow", "value", "actor", "ui_surface"}
+    if kind not in valid_kinds:
+        kind = "flow"
+
+    confidence = raw.get("confidence", "none")
+    if confidence not in ("none", "low", "medium", "high"):
+        confidence = "none"
+
+    priority = raw.get("priority", "needs-confirmation")
+    if priority not in ("established", "needs-confirmation", "hypothesis-with-trace", "speculation"):
+        priority = "needs-confirmation"
+
+    status = raw.get("status", "open")
+    if status not in ("open", "hypothesized", "confirmed", "contradicted", "resolved"):
+        status = "open"
+
+    pending_q = raw.get("pending_question")
+    if pending_q == "" or pending_q is None:
+        pending_q = None
+
+    return Fact(
+        id=str(raw.get("id") or "F?"),
+        kind=kind,
+        text=str(raw.get("text", "")),
+        confidence=confidence,
+        priority=priority,
+        status=status,
+        evidence=evidence,
+        derived_from=[str(x) for x in (raw.get("derived_from") or []) if isinstance(x, str)],
+        pending_question=pending_q,
+    )
+
+
+def _facts_summary(facts: list[Fact]) -> dict[str, int]:
+    return {
+        "total": len(facts),
+        "confirmed": sum(1 for f in facts if f.status in ("confirmed", "resolved")),
+        "pending": sum(
+            1 for f in facts
+            if f.priority == "needs-confirmation" and f.status not in ("confirmed", "resolved")
+        ),
+        "hypothesized": sum(1 for f in facts if f.status == "hypothesized"),
+        "open": sum(1 for f in facts if f.status == "open"),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Phase C3 — Adaptive interview loop
+# ---------------------------------------------------------------------------
+
+def run_adaptive_loop(
     repo_root: Path,
     cfg: ProjectConfig,
     global_state: GlobalState,
     interview: InterviewState,
 ) -> bool:
-    """Drive Q&A until all questions are handled or user pauses.
+    """Drive the fact-by-fact loop. Return True when all pending facts handled.
 
-    Returns True if all questions are processed (ready to generate guides),
-    False if user paused.
+    Returns False if user paused mid-loop.
     """
     agent = ClaudeAgent(repo_root, lang=cfg.lang)
-    total = len(interview.questions)
 
     while True:
-        # Find the next not-yet-handled question
-        pending = [q for q in interview.questions if q.answer is None and not q.skipped]
+        pending = interview.pending_facts()
         if not pending:
             return True
 
-        q = pending[0]
-        already_done = total - len(pending)
+        fact = pending[0]
+        _render_progress(interview, fact)
 
-        # Show context
-        ui.blank()
-        ui.section(
-            t("interview_block", block=q.block, topic=q.block_topic),
-            hint=t("interview_question_n", n=already_done + 1, total=total),
-        )
-        ui.console.print(f"  [bold]{q.id}.[/bold] {q.text}")
-        ui.blank()
-        ui.hint(t("interview_skip_hint"))
-
-        answer = None
         try:
             answer = ui.ask_text(t("interview_answer_q"), multiline=True)
         except ui.NonInteractiveError as e:
             ui.error(str(e))
-            ui.hint(t("interview_paused"))
-            interview.last_touched_at = datetime.now().isoformat(timespec="seconds")
+            interview.last_touched_at = _now()
             save_state(repo_root, global_state)
             return False
 
         if answer is None:
             ui.warn(t("interview_paused"))
-            interview.last_touched_at = datetime.now().isoformat(timespec="seconds")
+            interview.last_touched_at = _now()
             save_state(repo_root, global_state)
             return False
 
         stripped = answer.strip()
 
-        # User commands
         if stripped.lower() in PAUSE_TOKENS:
             ui.info(t("interview_paused"))
-            interview.last_touched_at = datetime.now().isoformat(timespec="seconds")
+            interview.last_touched_at = _now()
             save_state(repo_root, global_state)
             return False
 
         if stripped == "" or stripped.lower() in SKIP_TOKENS:
-            q.skipped = True
-            q.answered_at = datetime.now().isoformat(timespec="seconds")
+            # Skipping a needs-confirmation fact → demote to hypothesis-with-trace
+            # so it surfaces in Pendências instead of becoming an assertion.
+            fact.priority = "hypothesis-with-trace"
+            fact.status = "hypothesized"
+            fact.resolved_at = _now()
+            fact.last_touched_at = fact.resolved_at
             save_state(repo_root, global_state)
             continue
 
-        # Real answer
-        q.answer = stripped
-        q.answered_at = datetime.now().isoformat(timespec="seconds")
+        # Real answer — reflect with agent
+        fact.answer_text = stripped
+        fact.resolved_at = _now()
+        fact.last_touched_at = fact.resolved_at
         global_state.last_touched_slug = interview.slug
-        interview.last_touched_at = q.answered_at
+        interview.last_touched_at = fact.resolved_at
         save_state(repo_root, global_state)
 
-        # Coverage check — does this answer cover other pending questions?
-        other_pending = [other for other in interview.questions
-                         if other.answer is None and not other.skipped and other.id != q.id]
-        if other_pending:
-            try:
-                covered_ids = _check_coverage(agent, interview, q, stripped, other_pending)
-            except AgentError as e:
-                ui.warn(f"Coverage check skipped: {e}")
-                covered_ids = []
-            if covered_ids:
-                _apply_coverage(interview, q, covered_ids, stripped)
-                save_state(repo_root, global_state)
+        # Cross-check with agent
+        other_pending = [f for f in interview.pending_facts() if f.id != fact.id]
+        try:
+            reflection = _reflect_on_answer(agent, interview, fact, stripped, other_pending)
+        except AgentError as e:
+            ui.warn(f"{t('reflect_skipped')}: {e}")
+            # Default classification: trust the user
+            fact.status = "confirmed"
+            fact.evidence.append(Evidence(kind="answer", ref=fact.id, note="(reflection skipped)"))
+            save_state(repo_root, global_state)
+            continue
 
-    # unreachable
-    return True
+        _apply_reflection(interview, fact, stripped, reflection)
+        save_state(repo_root, global_state)
 
 
-def _check_coverage(
+def _reflect_on_answer(
     agent: ClaudeAgent,
     interview: InterviewState,
-    answered: QuestionState,
+    fact: Fact,
     answer: str,
-    pending: list[QuestionState],
-) -> list[str]:
-    pending_block = "\n".join(f"- **{q.id}** ({q.block}): {q.text}" for q in pending)
-    prompt = PROMPT_COVERAGE_CHECK.format(
-        question_id=answered.id,
-        question_text=answered.text.replace('"', "'"),
-        answer=answer.replace("\n", " ").strip()[:2000],
-        pending_block=pending_block,
+    other_pending: list[Fact],
+) -> dict[str, Any]:
+    """Call the agent to reflect on the user's answer."""
+    other_block = (
+        "\n".join(f"- **{f.id}** ({f.kind}): {f.pending_question or f.text}" for f in other_pending)
+        if other_pending
+        else "(none)"
     )
-    with ui.spinner("…"):
-        result = agent.call(prompt, expect_json=True, timeout=90)
+    prompt = _render_prompt(PROMPT_REFLECT_ON_ANSWER,
+        fact_id=fact.id,
+        fact_text=fact.text,
+        pending_question=fact.pending_question or fact.text,
+        answer=answer[:2000].replace("\n", " "),
+        other_facts_compact=other_block,
+    )
+    with ui.spinner(t("reflect_thinking")):
+        result = agent.call(prompt, expect_json=True, timeout=120)
     _track_cost(interview, result)
-    if result.is_error or not result.json_data:
-        return []
-    data = result.json_data
-    if not isinstance(data, dict):
-        return []
-    raw = data.get("covered", [])
-    return [str(x) for x in raw if isinstance(x, str)]
+
+    if result.is_error or not isinstance(result.json_data, dict):
+        # Don't blow up — return a minimal "confirmed" outcome to keep flow alive.
+        return {"outcome": "confirmed", "covers_other_facts": [], "new_facts": []}
+    return result.json_data
 
 
-def _apply_coverage(
+def _apply_reflection(
     interview: InterviewState,
-    by: QuestionState,
-    covered_ids: list[str],
+    fact: Fact,
     answer: str,
+    reflection: dict[str, Any],
 ) -> None:
-    actually_covered = [q for q in interview.questions if q.id in covered_ids and q.answer is None and not q.skipped]
-    if not actually_covered:
-        return
+    """Mutate the interview based on what the agent found."""
+    outcome = str(reflection.get("outcome", "confirmed"))
+    now = _now()
 
-    labels = ", ".join(q.id for q in actually_covered)
-    ui.info(t("interview_covered_others", questions=labels))
-    confirm = ui.ask_confirm(t("interview_covered_q"), default=True)
-    if not confirm:
-        return
+    if outcome == "contradicted":
+        fact.status = "contradicted"
+        note = str(reflection.get("contradiction_note", ""))
+        code_ref = str(reflection.get("code_ref", ""))
+        if code_ref:
+            fact.evidence.append(Evidence(kind="code", ref=code_ref, note=f"Contradiction: {note}"))
+        fact.evidence.append(Evidence(kind="answer", ref=fact.id, note="User answer (contradicts code)"))
+        ui.blank()
+        ui.warn(t("reflect_contradiction"))
+        if note:
+            ui.console.print(f"  [muted]{note}[/muted]")
+        if code_ref:
+            ui.console.print(f"  [muted]→ {code_ref}[/muted]")
+        ui.hint(t("reflect_contradiction_hint"))
 
-    now = datetime.now().isoformat(timespec="seconds")
-    for q in actually_covered:
-        q.covered_by = by.id
-        q.answer = f"(coberta por {by.id}: {answer.strip()[:500]})"
-        q.answered_at = now
+    elif outcome == "confirmed_with_correction":
+        fact.status = "confirmed"
+        note = str(reflection.get("correction_note", ""))
+        code_ref = str(reflection.get("code_ref", ""))
+        if code_ref:
+            fact.evidence.append(Evidence(kind="code", ref=code_ref, note=note))
+        fact.evidence.append(Evidence(kind="answer", ref=fact.id))
+        if note:
+            ui.blank()
+            ui.info(t("reflect_corrected"))
+            ui.console.print(f"  [muted]{note}[/muted]")
 
+    elif outcome == "needs_more":
+        fact.status = "open"
+        follow_up = str(reflection.get("follow_up_question", "")).strip()
+        if follow_up:
+            fact.pending_question = follow_up
+        else:
+            fact.status = "confirmed"
+            fact.evidence.append(Evidence(kind="answer", ref=fact.id))
+
+    else:  # confirmed
+        fact.status = "confirmed"
+        fact.evidence.append(Evidence(kind="answer", ref=fact.id))
+
+    # Coverage propagation
+    covered_ids = reflection.get("covers_other_facts", []) or []
+    if isinstance(covered_ids, list) and covered_ids:
+        by_id = {f.id: f for f in interview.facts}
+        labels = []
+        for cid in covered_ids:
+            f = by_id.get(str(cid))
+            if f and f.status not in ("confirmed", "resolved") and f.id != fact.id:
+                f.status = "resolved"
+                f.priority = "established"
+                f.resolved_at = now
+                f.last_touched_at = now
+                f.evidence.append(
+                    Evidence(kind="answer", ref=fact.id, note=f"Covered by answer to {fact.id}")
+                )
+                labels.append(f.id)
+        if labels:
+            ui.blank()
+            ui.info(t("reflect_covered_others", ids=", ".join(labels)))
+
+    # New facts that emerged
+    new_facts = reflection.get("new_facts", []) or []
+    if isinstance(new_facts, list) and new_facts:
+        for raw in new_facts:
+            try:
+                nf = _fact_from_raw(raw)
+            except Exception:
+                continue
+            # Avoid id collision
+            if any(f.id == nf.id for f in interview.facts):
+                next_n = 1 + max(
+                    (int(f.id[1:]) for f in interview.facts if f.id.startswith("F") and f.id[1:].isdigit()),
+                    default=0,
+                )
+                nf.id = f"F{next_n}"
+            interview.facts.append(nf)
+        ui.info(t("reflect_new_facts", n=len(new_facts)))
+
+
+# ---------------------------------------------------------------------------
+# Phase C4 — Pre-generation self-audit
+# ---------------------------------------------------------------------------
+
+def pregen_self_audit(
+    repo_root: Path,
+    cfg: ProjectConfig,
+    interview: InterviewState,
+) -> tuple[bool, dict[str, Any]]:
+    """Returns (ready_to_generate, audit_dict)."""
+    agent = ClaudeAgent(repo_root, lang=cfg.lang)
+    facts_compact = "\n".join(
+        f"- **{f.id}** ({f.kind}, priority={f.priority}, status={f.status}, "
+        f"conf={f.confidence}): {f.text[:120]}"
+        for f in interview.facts
+    )
+
+    prompt = _render_prompt(PROMPT_PREGEN_SELF_AUDIT,
+        slug=interview.slug,
+        domain=interview.domain,
+        lang=cfg.lang,
+        facts_compact=facts_compact,
+    )
+
+    try:
+        with ui.spinner(t("pregen_audit")):
+            result = agent.call(prompt, expect_json=True, timeout=120)
+    except AgentError as e:
+        ui.warn(f"Self-audit skipped: {e}")
+        return True, {}
+
+    _track_cost(interview, result)
+
+    if result.is_error or not isinstance(result.json_data, dict):
+        return True, {}
+
+    data = result.json_data
+    ready = bool(data.get("ready_to_generate", True))
+    return ready, data
+
+
+# ---------------------------------------------------------------------------
+# Phase C5 — Generate the v1 paired guides
+# ---------------------------------------------------------------------------
 
 def generate_guides(
     repo_root: Path,
@@ -324,36 +546,46 @@ def generate_guides(
     interview: InterviewState,
     global_state: GlobalState | None = None,
 ) -> bool:
-    """Send the full interview transcript to the agent and ask it to write the guides.
-
-    When `global_state` is provided, agent's `next_recommendation` is persisted into
-    `global_state.next_recommendations` for the smart menu to surface later.
-    """
+    """Ask the agent to write produto + tech + interview .md files."""
     agent = ClaudeAgent(repo_root, lang=cfg.lang)
 
-    answers_block_lines = []
-    for q in interview.questions:
-        answers_block_lines.append(f"### {q.id} ({q.block} — {q.block_topic})")
-        answers_block_lines.append(f"**Q:** {q.text}")
-        if q.skipped:
-            answers_block_lines.append("**A:** _(pulada)_")
-        elif q.covered_by:
-            answers_block_lines.append(f"**A:** _(coberta por {q.covered_by})_")
-        else:
-            answers_block_lines.append(f"**A:** {q.answer or '(sem resposta)'}")
-        answers_block_lines.append("")
+    # Compute confidence score before sending it to the agent
+    interview.confidence_score = interview.compute_confidence_score()
 
-    answers_block = "\n".join(answers_block_lines)
+    facts_payload = []
+    for f in interview.facts:
+        # Drop pure speculation; agent should never see them.
+        if f.priority == "speculation":
+            continue
+        facts_payload.append(
+            {
+                "id": f.id,
+                "kind": f.kind,
+                "text": f.text,
+                "confidence": f.confidence,
+                "priority": f.priority,
+                "status": f.status,
+                "evidence": [{"kind": e.kind, "ref": e.ref, "note": e.note} for e in f.evidence],
+                "answer_text": f.answer_text,
+                "pending_question": f.pending_question,
+            }
+        )
 
-    prompt = PROMPT_GENERATE_GUIDES.format(
+    full_dir_path = guides_root(repo_root, cfg) / interview.domain
+    full_dir_rel = full_dir_path.relative_to(repo_root)
+
+    prompt = _render_prompt(PROMPT_GENERATE_GUIDES,
         slug=interview.slug,
         domain=interview.domain,
-        title=interview.title,
+        title=interview.title or interview.slug,
         lang=cfg.lang,
-        docs_dir=cfg.docs_dir,
         repo_root=str(repo_root),
-        source_files="(see during exploration)",
-        answers_block=answers_block,
+        docs_dir=cfg.docs_dir,
+        guides_subdir=cfg.guides_subdir,
+        full_dir=str(full_dir_rel),
+        today=datetime.now().date().isoformat(),
+        facts_full=json.dumps(facts_payload, ensure_ascii=False, indent=2),
+        quality_score=f"{interview.confidence_score:.2f}",
     )
 
     ui.blank()
@@ -364,21 +596,15 @@ def generate_guides(
         ui.error(str(e))
         return False
 
-    # Track cost even on error so the user sees what they paid for the failed run.
     _track_cost(interview, result)
 
     if result.is_error:
         ui.error(result.error_message or "Agent error during guide generation.")
         return False
 
-    # Parse the agent's JSON envelope: {files_written, summary, next_recommendation}.
-    # If parsing fails (model went off-script), we still record the raw text so
-    # the user sees something useful.
     written, summary, next_rec = _parse_generate_envelope(result.text or "")
 
-    # Verify the agent actually wrote what it claimed (issue #10 — guard against
-    # silent failure / hallucinated paths). If anything is missing, do NOT mark
-    # the interview as 'generated' — keep it 'in_progress' so the user can rerun.
+    # Verify the agent actually wrote what it claimed (carried from v0.1.x)
     missing = [f for f in written if not (repo_root / f).exists()]
     if written and missing:
         ui.error(t("interview_files_missing", n=len(missing), total=len(written)))
@@ -388,36 +614,33 @@ def generate_guides(
         return False
 
     if not written:
-        # Agent did not return a parseable list. Cross-check against expected paths.
+        # Cross-check expected paths
         expected = [
-            f"{cfg.docs_dir}/{interview.domain}/{interview.slug}.md",
-            f"{cfg.docs_dir}/{interview.domain}/{interview.slug}.tech.md",
+            f"{full_dir_rel}/{interview.slug}.md",
+            f"{full_dir_rel}/{interview.slug}.tech.md",
         ]
-        actually_present = [p for p in expected if (repo_root / p).exists()]
-        if not actually_present:
+        present = [p for p in expected if (repo_root / p).exists()]
+        if not present:
             ui.error(t("interview_no_files_written"))
             ui.hint(t("interview_files_missing_hint"))
             return False
-        # Recover: agent wrote files but didn't tell us — use the cross-check.
-        written = actually_present
+        written = present
         ui.warn(t("interview_files_recovered", n=len(written)))
 
     interview.status = "generated"
 
-    # Persist next_recommendation in the GlobalState so `livedocs` (no args) can offer it.
-    if next_rec is not None and global_state is not None:
+    if next_rec is not None and global_state is not None and next_rec.get("slug"):
         nr = NextRecommendation(
-            slug=next_rec.get("slug", "").strip(),
-            domain=next_rec.get("domain", interview.domain).strip(),
-            reason=next_rec.get("reason", "").strip(),
+            slug=str(next_rec["slug"]).strip(),
+            domain=str(next_rec.get("domain", interview.domain)).strip(),
+            reason=str(next_rec.get("reason", "")).strip(),
             suggested_by=interview.slug,
         )
-        if nr.slug:
-            # Replace any previous suggestion with the same slug (idempotent re-runs).
-            global_state.next_recommendations = [
-                r for r in global_state.next_recommendations if r.slug != nr.slug
-            ]
-            global_state.next_recommendations.append(nr)
+        # Idempotent: replace any previous same-slug suggestion.
+        global_state.next_recommendations = [
+            r for r in global_state.next_recommendations if r.slug != nr.slug
+        ]
+        global_state.next_recommendations.append(nr)
 
     ui.success(t("interview_complete"))
     if interview.total_cost_usd > 0 or interview.agent_calls > 0:
@@ -426,14 +649,17 @@ def generate_guides(
             f"{t('cost_summary', calls=interview.agent_calls, cost=interview.total_cost_usd, secs=interview.total_duration_ms / 1000)}"
             f"[/muted]"
         )
+
     if written:
         ui.blank()
         ui.info(t("interview_files_created"))
         for f in written:
             ui.console.print(f"  [accent]{f}[/accent]")
+
     if summary:
         ui.blank()
         ui.console.print(f"[muted]{summary}[/muted]")
+
     if next_rec is not None and next_rec.get("slug"):
         ui.blank()
         ui.console.print(
@@ -446,27 +672,63 @@ def generate_guides(
         ui.blank()
         ui.hint(t("interview_next_command", slug=next_rec.get("slug"), domain=next_rec.get("domain", interview.domain)))
     elif not written and not summary and result.text:
-        # Fallback when the agent did not return JSON: show raw text.
         ui.console.print(result.text[:1500])
+
     return True
 
 
-def _parse_generate_envelope(text: str) -> tuple[list[str], str, dict | None]:
-    """Extract (files_written, summary, next_recommendation) from the agent reply.
+# ---------------------------------------------------------------------------
+# UI helpers (visual progress, fact list)
+# ---------------------------------------------------------------------------
 
-    Tolerates code fences and surrounding prose. Returns ([], "", None) on failure
-    (no exception): callers fall back to mark `generated` regardless.
-    """
-    import json
+def _render_progress(interview: InterviewState, current_fact: Fact) -> None:
+    """Show 'where we are' header before the next question."""
+    coverage = interview.coverage_ratio()
+    bar_width = 20
+    filled = int(round(coverage * bar_width))
+    bar = "█" * filled + "░" * (bar_width - filled)
+    pct = int(round(coverage * 100))
+
+    pending = interview.pending_facts()
+    confirmed = interview.confirmed_facts()
+    hypothesized = interview.hypothesized_facts()
+
+    ui.blank()
+    ui.section(interview.title or interview.slug, hint=f"({interview.domain})")
+    ui.console.print(
+        f"  [brand]{bar}[/brand]  [accent]{pct}%[/accent]   "
+        f"[ok]✓ {len(confirmed)}[/ok]  [warn]→ {len(pending)}[/warn]"
+        + (f"  [muted]🟡 {len(hypothesized)}[/muted]" if hypothesized else "")
+    )
+    ui.blank()
+    ui.console.print(
+        f"  [bold]{current_fact.id}[/bold] "
+        f"[muted]({_kind_label(current_fact.kind, interview)})[/muted]"
+    )
+    ui.console.print(f"  {current_fact.pending_question or current_fact.text}")
+    ui.blank()
+    ui.hint(t("interview_skip_hint"))
+
+
+def _kind_label(kind: str, interview: InterviewState) -> str:
+    """Translate the technical kind into a human label in interview language."""
+    # interview lang is held in state via i18n; we don't have per-interview lang yet,
+    # so we use the active language.
+    return t(f"fact_kind_{kind}", default_=kind)
+
+
+# ---------------------------------------------------------------------------
+# JSON envelope parser (carried over from v0.1, robust to off-script replies)
+# ---------------------------------------------------------------------------
+
+def _parse_generate_envelope(text: str) -> tuple[list[str], str, dict | None]:
     import re
 
     if not text:
         return [], "", None
 
     candidate = text.strip()
-    # Strip code fences if present.
     if candidate.startswith("```"):
-        # crude fence stripper — first line and last line if they are fences
         lines = candidate.splitlines()
         if lines and lines[0].startswith("```"):
             lines = lines[1:]
@@ -474,7 +736,6 @@ def _parse_generate_envelope(text: str) -> tuple[list[str], str, dict | None]:
             lines = lines[:-1]
         candidate = "\n".join(lines).strip()
 
-    # If still not pure JSON, try to find the largest {...} block.
     if not candidate.startswith("{"):
         m = re.search(r"\{.*\}", candidate, re.DOTALL)
         candidate = m.group(0) if m else ""
@@ -490,9 +751,26 @@ def _parse_generate_envelope(text: str) -> tuple[list[str], str, dict | None]:
     if not isinstance(data, dict):
         return [], "", None
 
-    written = [str(f) for f in data.get("files_written", []) if isinstance(f, str)]
+    written = [str(f) for f in (data.get("files_written") or []) if isinstance(f, str)]
     summary = str(data.get("summary", "") or "")
     next_rec = data.get("next_recommendation")
     if not isinstance(next_rec, dict):
         next_rec = None
     return written, summary, next_rec
+
+
+def _now() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+__all__ = [
+    "parse_intent",
+    "build_skeleton",
+    "run_adaptive_loop",
+    "pregen_self_audit",
+    "generate_guides",
+]

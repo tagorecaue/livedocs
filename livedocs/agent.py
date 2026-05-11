@@ -85,8 +85,10 @@ class ClaudeAgent:
         if self.model:
             cmd.extend(["--model", self.model])
 
-        # System prompt: skill + language pinning
-        sys_prompt = LIVEDOCS_SYSTEM_PROMPT.format(lang=self.lang)
+        # System prompt: skill + language pinning.
+        # We use simple string replacement instead of `.format()` because the prompts
+        # contain plenty of literal `{...}` JSON examples that would trip str.format.
+        sys_prompt = LIVEDOCS_SYSTEM_PROMPT.replace("{lang}", self.lang)
         if extra_system:
             sys_prompt = f"{sys_prompt}\n\n---\n\n{extra_system}"
         cmd.extend(["--append-system-prompt", sys_prompt])
