@@ -418,6 +418,37 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Auditando evidências antes de gerar",
         "en": "Auditing evidence before generation",
     },
+    # ---- Closing question (open free-form catch-all at the end of interview) ----
+    "closing_q_title": {
+        "pt-BR": "Algo a acrescentar?",
+        "en": "Anything to add?",
+    },
+    "closing_q_hint": {
+        "pt-BR": "Esta é sua chance de registrar regras, dúvidas comuns ou detalhes "
+                 "que não apareceram nas perguntas. Pode falar livre, eu organizo.",
+        "en": "This is your chance to register rules, common doubts or details "
+              "the questions didn't surface. Speak freely — I'll organize.",
+    },
+    "closing_q": {
+        "pt-BR": "Gostaria de acrescentar algo? (deixe em branco para pular)",
+        "en": "Want to add anything? (leave blank to skip)",
+    },
+    "closing_saved_short": {
+        "pt-BR": "Salvo nas notas do guia.",
+        "en": "Saved to the guide notes.",
+    },
+    "closing_processing": {
+        "pt-BR": "Organizando sua resposta",
+        "en": "Organizing your answer",
+    },
+    "closing_saved_notes_only": {
+        "pt-BR": "Salvo nas notas (nada para estruturar como fato).",
+        "en": "Saved to notes (nothing to structure as a fact).",
+    },
+    "closing_added_facts": {
+        "pt-BR": "{n} fato(s) extraído(s) da sua resposta.",
+        "en": "{n} fact(s) extracted from your answer.",
+    },
     # ---- Phase D.1 — Post-generation evaluators ----
     "eval_running": {
         "pt-BR": "Auditando o guia gerado em 3 dimensões",

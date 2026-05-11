@@ -79,6 +79,12 @@ FactKind = Literal[
     "value",         # numeric/threshold/limit
     "actor",         # who triggers (operator, customer, system, cron)
     "ui_surface",    # screen / modal / route where it appears
+    # ---- Knowledge categories the agent cannot derive from code alone ----
+    "rationale",              # why does this decision exist? (magic numbers,
+                              # hardcoded flags, counter-intuitive behavior)
+    "customer_question",      # common doubts / FAQ from end users
+    "business_rule_unwritten",# cultural/convention rule that lives outside code
+    "closing_note",           # free-form catch-all from the closing question
 ]
 
 FactConfidence = Literal["none", "low", "medium", "high"]

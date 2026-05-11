@@ -184,6 +184,7 @@ enough to ground your skeleton in real code, not so many you drown in detail.
 For each fact:
   - Assign an id (F1, F2, F3, ...).
   - Choose `kind`: trigger | invariant | edge_case | terminology | flow | value | actor | ui_surface
+    | rationale | customer_question | business_rule_unwritten
   - Write a one-sentence `text` claim in **{lang}**.
   - Assess `confidence` based on what the code shows (none/low/medium/high).
   - Pick `priority` per the principle:
@@ -208,6 +209,40 @@ For each fact:
   - For needs-confirmation facts, write a `pending_question` field — the actual
     question to ask the user in **{lang}**. Phrase it as "I see X in the code,
     is Y still true?" rather than "what is X?".
+
+### Step 2b: Add knowledge categories beyond the code
+
+The agent reading the code can never derive these alone. Always propose at
+least a few of each:
+
+  - **`rationale`** (1-3 facts) — for each magic number, hardcoded flag, or
+    counter-intuitive behavior you spotted, propose ONE rationale fact asking
+    *why* this decision exists. Evidence: the code ref where you spotted it.
+    Priority: `needs-confirmation`. Status: `open`. The `pending_question`
+    should be: "Vi no código que <X = 24h>. Existe razão de produto pra esse
+    valor, ou é arbitrário?".
+
+  - **`customer_question`** (2-3 facts) — propose facts of the form
+    *"FAQ candidate: <pergunta provável de cliente/suporte>"*. Use your
+    domain knowledge to imagine what end users would ask about this topic.
+    Examples: "O que acontece se eu cancelar X enquanto está processando?",
+    "Por que minha comissão veio menor que mês passado?". Evidence: empty
+    (these are FAQ candidates, not code-derived). Priority:
+    `needs-confirmation`. Status: `open`. The `pending_question` should be:
+    "Listei 3 dúvidas que clientes finais provavelmente teriam. Quais são
+    válidas, quais escapam? Adicione outras se vier à mente."
+
+  - **`business_rule_unwritten`** (0-2 facts) — when you see behavior that
+    looks like it should be configurable but isn't (e.g., a discount rule
+    that only fires for one specific customer segment, with no flag), propose
+    a fact asking if there's an unwritten business rule. Priority:
+    `needs-confirmation`. Status: `open`. The `pending_question`: "Essa regra
+    é decisão deliberada de produto ou padrão histórico que ninguém revisou?".
+
+These facts have `evidence[]` either empty (for customer_question) or pointing
+to code where you spotted the convention (for rationale / business_rule_unwritten).
+They will become Q&A entries in the interview, and the answers will enrich the
+guide with product/business context the code alone cannot provide.
 
 ### Step 3: Auto-audit the skeleton
 
@@ -317,6 +352,75 @@ Did the answer reveal a fact you didn't have in the skeleton? List them as
   "follow_up_question": "",
   "covers_other_facts": ["F4", "F7"],
   "new_facts": []
+}}
+
+Output ONLY the JSON.
+"""
+
+
+# -----------------------------------------------------------------------------
+# PROCESS CLOSING ANSWER — extract structure from the free-form catch-all
+# -----------------------------------------------------------------------------
+
+PROMPT_PROCESS_CLOSING_ANSWER = """\
+# Task: Process the user's closing free-form answer
+
+At the end of the interview for `{slug}` (domain: `{domain}`), the user was
+asked: *"Algo que você gostaria de registrar e que ninguém perguntou ainda?
+(pode falar livre, eu organizo)"*.
+
+Their answer:
+
+---
+{closing_answer}
+---
+
+Your job: turn this into structured material for the guide.
+
+## Rules
+
+1. If the answer is short (a one-line note or trivial) → return empty `new_facts`
+   and put the answer in `appendix_notes` verbatim. Don't invent facts.
+
+2. If the answer is rich (mentions concrete behaviors, rules, edge cases,
+   product decisions, FAQ hints): extract those as new Fact entries with the
+   same shape used everywhere else (id starts at the next free F#, you can
+   use `F?` and the CLI will renumber; pick `kind` from the standard list
+   including `rationale`, `customer_question`, `business_rule_unwritten`,
+   `closing_note`).
+
+3. NEVER fabricate evidence. For facts derived from the user's verbal
+   statement, use `evidence: [{{kind: "answer", ref: "closing", note: "..."}}]`.
+
+4. Use `closing_note` kind when the content is meaningful but doesn't fit
+   any other category (general guidance, gotcha, future intention).
+
+5. Set `priority: "established"` and `status: "confirmed"` for everything you
+   extract — the user already told you this. We're not asking again.
+
+## Output (STRICT JSON)
+
+{{
+  "new_facts": [
+    {{
+      "id": "F?",
+      "kind": "rationale" | "customer_question" | "business_rule_unwritten"
+              | "closing_note" | "edge_case" | "invariant" | ...,
+      "text": "Statement in {lang}",
+      "confidence": "high",
+      "priority": "established",
+      "status": "confirmed",
+      "evidence": [{{"kind": "answer", "ref": "closing", "note": "User stated X verbatim"}}]
+    }}
+  ],
+  "appendix_notes": "Optional verbatim or summarized text to append to the guide's notes (in {lang})"
+}}
+
+If the answer was effectively empty (just "no", "nada", "ok", ""):
+
+{{
+  "new_facts": [],
+  "appendix_notes": ""
 }}
 
 Output ONLY the JSON.

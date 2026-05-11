@@ -16,6 +16,7 @@ from pathlib import Path
 from livedocs import ui
 from livedocs.commands.interview import (
     build_skeleton,
+    closing_step,
     generate_guides,
     parse_intent,
     pregen_self_audit,
@@ -198,6 +199,12 @@ def _finish_and_generate(
     state: GlobalState,
     interview: InterviewState,
 ) -> int:
+    # Closing step — "anything to add?" valve. Always runs (the user gets
+    # the option to skip by leaving it blank). Happens BEFORE the pregen audit
+    # so any new facts derived from the closing answer get audited too.
+    closing_step(repo_root, cfg, interview)
+    save_state(repo_root, state)
+
     # Pre-generation self-audit
     ready, audit = pregen_self_audit(repo_root, cfg, interview)
     if not ready:

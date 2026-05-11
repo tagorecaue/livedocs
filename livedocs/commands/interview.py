@@ -34,6 +34,7 @@ from livedocs.skill import (
     PROMPT_GENERATE_GUIDES,
     PROMPT_PARSE_INTENT,
     PROMPT_PREGEN_SELF_AUDIT,
+    PROMPT_PROCESS_CLOSING_ANSWER,
     PROMPT_REFLECT_ON_ANSWER,
 )
 from livedocs.state import (
@@ -250,7 +251,15 @@ def _fact_from_raw(raw: dict) -> Fact:
         evidence.append(Evidence(kind=ek, ref=str(e.get("ref", "")), note=str(e.get("note", ""))))
 
     kind = raw.get("kind", "flow")
-    valid_kinds = {"trigger", "invariant", "edge_case", "terminology", "flow", "value", "actor", "ui_surface"}
+    # Mirror the FactKind Literal from models.py — kept in sync there.
+    valid_kinds = {
+        "trigger", "invariant", "edge_case", "terminology", "flow",
+        "value", "actor", "ui_surface",
+        # Knowledge categories beyond code (added when we brought back the
+        # rationale / customer-question / business-rule / closing-note layer):
+        "rationale", "customer_question", "business_rule_unwritten",
+        "closing_note",
+    }
     if kind not in valid_kinds:
         kind = "flow"
 
@@ -498,6 +507,130 @@ def _apply_reflection(
 # ---------------------------------------------------------------------------
 # Phase C4 — Pre-generation self-audit
 # ---------------------------------------------------------------------------
+
+def closing_step(
+    repo_root: Path,
+    cfg: ProjectConfig,
+    interview: InterviewState,
+) -> int:
+    """Ask the user one open free-form question at the end of the interview.
+
+    The "did we miss anything?" valve. The answer feeds back as either:
+      - plain `interview.notes` (short / trivial answers)
+      - structured new Facts (rich answers, processed by the agent)
+
+    Threshold for triggering the extra agent processing call: answer must be
+    longer than CLOSING_PROCESS_THRESHOLD chars. Short answers go to notes
+    only, no extra token spend.
+
+    Returns count of new facts added (0 if user skipped or answer was trivial).
+    Failure modes are absorbed — never blocks the flow.
+    """
+    ui.blank()
+    ui.section(t("closing_q_title"))
+    ui.hint(t("closing_q_hint"))
+
+    try:
+        answer = ui.ask_text(t("closing_q"), multiline=True)
+    except ui.NonInteractiveError:
+        return 0
+
+    if answer is None:
+        return 0
+    answer = answer.strip()
+    if not answer:
+        return 0
+
+    # ALWAYS keep the raw answer as notes — it's the user's verbatim input.
+    if interview.notes:
+        interview.notes = f"{interview.notes}\n\n---\n\n{answer}"
+    else:
+        interview.notes = answer
+
+    # Short answers: notes-only path, no extra agent call.
+    if len(answer) < CLOSING_PROCESS_THRESHOLD:
+        ui.info(t("closing_saved_short"))
+        return 0
+
+    # Rich answer: ask the agent to structure it into facts.
+    agent = ClaudeAgent(repo_root, lang=cfg.lang)
+    prompt = _render_prompt(
+        PROMPT_PROCESS_CLOSING_ANSWER,
+        slug=interview.slug,
+        domain=interview.domain,
+        lang=cfg.lang,
+        closing_answer=answer,
+    )
+
+    try:
+        with ui.spinner(t("closing_processing")):
+            result = agent.call(prompt, expect_json=True, timeout=120)
+    except AgentError as e:
+        ui.warn(f"Closing processing skipped: {e}")
+        return 0
+
+    _track_cost(interview, result)
+
+    if result.is_error or not isinstance(result.json_data, dict):
+        # Answer is preserved in notes. Just couldn't structure it.
+        ui.info(t("closing_saved_notes_only"))
+        return 0
+
+    data = result.json_data
+    raw_new = data.get("new_facts") or []
+    appendix = str(data.get("appendix_notes") or "").strip()
+
+    # Optionally append the agent's summarized notes to the user's verbatim.
+    if appendix and appendix != answer:
+        interview.notes = f"{interview.notes}\n\n---\n\n{appendix}"
+
+    added = 0
+    next_id = _next_fact_id(interview)
+    for raw in raw_new:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            new_fact = _fact_from_raw(raw)
+        except Exception:
+            continue
+        # Rewrite F? / clashing ids
+        if new_fact.id in {f.id for f in interview.facts} or new_fact.id in ("", "F?"):
+            new_fact.id = next_id
+            next_id = _bump_fact_id(next_id)
+        interview.facts.append(new_fact)
+        added += 1
+
+    if added:
+        ui.success(t("closing_added_facts", n=added))
+    else:
+        ui.info(t("closing_saved_notes_only"))
+    return added
+
+
+# Threshold (chars) under which we don't bother the agent with the closing
+# answer — it just goes to notes verbatim. Tuned conservatively: enough to
+# capture single-sentence "lembrei agora que X" but skip "no", "ok", "nada".
+CLOSING_PROCESS_THRESHOLD = 80
+
+
+def _next_fact_id(interview: InterviewState) -> str:
+    """Return the next free F# id given an interview's current facts."""
+    used = set()
+    for f in interview.facts:
+        if f.id.startswith("F") and f.id[1:].isdigit():
+            used.add(int(f.id[1:]))
+    n = 1
+    while n in used:
+        n += 1
+    return f"F{n}"
+
+
+def _bump_fact_id(current: str) -> str:
+    """Increment 'F12' → 'F13'. Falls back to F1 if shape is unexpected."""
+    if current.startswith("F") and current[1:].isdigit():
+        return f"F{int(current[1:]) + 1}"
+    return "F1"
+
 
 def pregen_self_audit(
     repo_root: Path,
@@ -826,6 +959,7 @@ __all__ = [
     "parse_intent",
     "build_skeleton",
     "run_adaptive_loop",
+    "closing_step",
     "pregen_self_audit",
     "generate_guides",
 ]

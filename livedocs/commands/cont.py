@@ -6,6 +6,7 @@ from pathlib import Path
 
 from livedocs import ui
 from livedocs.commands.interview import (
+    closing_step,
     generate_guides,
     pregen_self_audit,
     run_adaptive_loop,
@@ -72,6 +73,10 @@ def run_continue(
     completed = run_adaptive_loop(repo_root, cfg, state, interview)
     if not completed:
         return 0  # paused, success-ish
+
+    # Closing step — "anything to add?" valve. Runs BEFORE the pregen audit.
+    closing_step(repo_root, cfg, interview)
+    save_state(repo_root, state)
 
     # Pre-generation self-audit
     ready, audit = pregen_self_audit(repo_root, cfg, interview)
