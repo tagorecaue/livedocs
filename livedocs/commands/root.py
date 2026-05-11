@@ -6,6 +6,7 @@ action. Replaces the cognitive load of remembering subcommands.
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 
 from livedocs import ui
@@ -147,29 +148,34 @@ def _render_menu_and_pick(repo_root: Path, cfg, state) -> str | None:
 
 
 def _dispatch(repo_root: Path, picked: str) -> None:
-    """Run the action implied by the menu pick. Errors are surfaced but
-    swallowed so the caller can loop back to the menu."""
+    """Run the action implied by the menu pick. After it finishes, pause briefly
+    so any final error/info message stays visible before the menu re-renders."""
+    rc = 0
     if picked == "new":
-        run_new(repo_root)
-        return
-    if picked == "status":
-        run_status(repo_root)
-        return
-    if picked == "review":
-        run_review(repo_root)
-        return
-    if picked.startswith("continue:"):
+        rc = run_new(repo_root) or 0
+    elif picked == "status":
+        rc = run_status(repo_root) or 0
+    elif picked == "review":
+        rc = run_review(repo_root) or 0
+    elif picked.startswith("continue:"):
         slug = picked.split(":", 1)[1]
-        run_continue(repo_root, slug=slug)
-        return
-    if picked.startswith("approve:"):
+        rc = run_continue(repo_root, slug=slug) or 0
+    elif picked.startswith("approve:"):
         slug = picked.split(":", 1)[1]
-        run_approve(repo_root, slug=slug)
-        return
-    if picked.startswith("new_suggested:"):
+        rc = run_approve(repo_root, slug=slug) or 0
+    elif picked.startswith("new_suggested:"):
         _, slug, domain = picked.split(":", 2)
-        run_new(repo_root, slug=slug, domain=domain)
-        return
+        rc = run_new(repo_root, slug=slug, domain=domain) or 0
+
+    # If the action returned non-zero, give the user a chance to read the error
+    # before the menu re-renders and clears the scroll context.
+    if rc != 0:
+        ui.blank()
+        ui.warn(
+            f"[muted](action exited with code {rc}; press Enter to return to menu)[/muted]"
+        )
+        with contextlib.suppress(ui.NonInteractiveError):
+            ui.ask_text(" ", default="")
 
 
 def _offer_init(cwd: Path) -> int:
