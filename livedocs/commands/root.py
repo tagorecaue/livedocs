@@ -21,18 +21,44 @@ from livedocs.state import load_config, load_state
 
 
 def run_root(repo_root: Path | None) -> int:
-    """No subcommand path. Detects state and offers next step."""
+    """No subcommand path. Loops the menu until the user chooses to exit.
+
+    Each menu cycle:
+      1. Show the splash + 'where we left off' snapshot
+      2. Build a smart menu from current state
+      3. Run the chosen action
+      4. Loop back unless the user picked 'exit' or hit Ctrl-C
+    """
     cwd = Path.cwd()
     if repo_root is None or load_config(repo_root) is None:
         return _offer_init(cwd)
 
     cfg = load_config(repo_root)
     assert cfg is not None  # narrowed by the check above
-
     set_lang(cfg.lang)
     ui.splash()
 
-    state = load_state(repo_root)
+    while True:
+        # Reload state on every cycle — actions may have mutated it on disk.
+        state = load_state(repo_root)
+        try:
+            picked = _render_menu_and_pick(repo_root, cfg, state)
+        except ui.NonInteractiveError:
+            # No TTY → can't loop, just show splash + bail.
+            return 0
+        if picked is None or picked == "exit":
+            return 0
+        try:
+            _dispatch(repo_root, picked)
+        except KeyboardInterrupt:
+            # User hit Ctrl-C inside the action — back to menu, not exit.
+            ui.blank()
+            ui.warn(t("abort"))
+            continue
+
+
+def _render_menu_and_pick(repo_root: Path, cfg, state) -> str | None:
+    """Print the 'where we left off' snapshot, build the menu, return the pick."""
 
     # Compose a "where we left off" snapshot
     in_progress = [iv for iv in state.interviews.values() if iv.status == "in_progress"]
@@ -117,26 +143,33 @@ def run_root(repo_root: Path | None) -> int:
         ui.blank()
 
     picked = ui.ask_choice(t("what_now"), choices=choices)
-    if picked is None or picked == "exit":
-        return 0
+    return picked
 
+
+def _dispatch(repo_root: Path, picked: str) -> None:
+    """Run the action implied by the menu pick. Errors are surfaced but
+    swallowed so the caller can loop back to the menu."""
     if picked == "new":
-        return run_new(repo_root)
+        run_new(repo_root)
+        return
     if picked == "status":
-        return run_status(repo_root)
+        run_status(repo_root)
+        return
     if picked == "review":
-        return run_review(repo_root)
+        run_review(repo_root)
+        return
     if picked.startswith("continue:"):
         slug = picked.split(":", 1)[1]
-        return run_continue(repo_root, slug=slug)
+        run_continue(repo_root, slug=slug)
+        return
     if picked.startswith("approve:"):
         slug = picked.split(":", 1)[1]
-        return run_approve(repo_root, slug=slug)
+        run_approve(repo_root, slug=slug)
+        return
     if picked.startswith("new_suggested:"):
         _, slug, domain = picked.split(":", 2)
-        return run_new(repo_root, slug=slug, domain=domain)
-
-    return 0
+        run_new(repo_root, slug=slug, domain=domain)
+        return
 
 
 def _offer_init(cwd: Path) -> int:

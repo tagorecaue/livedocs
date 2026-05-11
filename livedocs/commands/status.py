@@ -1,7 +1,17 @@
-"""`livedocs status` — show overview of all guides and their state."""
+"""`livedocs status` — show overview of all guides and their state.
+
+After printing the table, offers a picker so the user can act on any guide
+without having to type its slug. Actions depend on the guide's status:
+  draft       → start
+  in_progress → continue
+  generated   → approve
+  reviewed    → (no action yet — Phase 3 may add regenerate)
+  stale       → (Phase 3)
+"""
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 
 from livedocs import ui
@@ -54,4 +64,88 @@ def run_status(repo_root: Path, with_cost: bool = False) -> int:
     ui.info(t("status_total", n=len(state.interviews)))
     if with_cost:
         ui.info(t("status_total_cost", calls=total_calls, cost=total_cost))
+
+    # ---- Picker: act on a guide directly from status ----
+    actionable = [iv for iv in state.interviews.values() if _has_action(iv)]
+    if not actionable:
+        # Nothing actionable (everything reviewed and no stale). Just return.
+        return 0
+
+    with contextlib.suppress(ui.NonInteractiveError):
+        # Non-TTY (CI, pipes): the status print was the whole job — skip picker.
+        _offer_actions(repo_root, state)
+
     return 0
+
+
+def _has_action(iv) -> bool:
+    """Whether this guide has at least one available action right now."""
+    return iv.status in ("draft", "in_progress", "generated")
+
+
+def _offer_actions(repo_root: Path, state) -> None:
+    """Mini-menu inside status: pick a guide → pick an action.
+
+    Returns to caller without exit so run_root's main loop continues.
+    """
+    cfg = load_config(repo_root)
+    assert cfg is not None  # caller verified
+
+    # Build the per-guide choices list. We label each row with slug + a hint
+    # about the available action so the user doesn't need to interpret status.
+    choices: list[tuple[str, str]] = []
+    for slug, iv in sorted(state.interviews.items()):
+        verb = _action_verb(iv, cfg.lang)
+        if not verb:
+            continue
+        label = f"{slug}  [{iv.domain}]  — {verb}"
+        choices.append((label, slug))
+
+    if not choices:
+        return
+
+    # Append a 'back' option so the user can return to the main menu without
+    # picking anything.
+    back_label = "← Voltar" if cfg.lang == "pt-BR" else "← Back"
+    choices.append((back_label, "__back__"))
+
+    ui.blank()
+    pick_q = (
+        "Quer agir em algum guia?"
+        if cfg.lang == "pt-BR"
+        else "Want to act on any guide?"
+    )
+    slug = ui.ask_choice(pick_q, choices=choices)
+    if slug is None or slug == "__back__":
+        return
+
+    iv = state.interviews[slug]
+    _execute_action(repo_root, iv)
+
+
+def _action_verb(iv, lang: str) -> str | None:
+    """Human-readable verb for the available action, or None if no action."""
+    if iv.status == "draft":
+        return "começar" if lang == "pt-BR" else "start"
+    if iv.status == "in_progress":
+        return "continuar" if lang == "pt-BR" else "continue"
+    if iv.status == "generated":
+        return "aprovar" if lang == "pt-BR" else "approve"
+    return None
+
+
+def _execute_action(repo_root: Path, iv) -> None:
+    """Dispatch the action implied by the guide's current status."""
+    # Local imports avoid circular import at module load time.
+    from livedocs.commands.approve import run_approve
+    from livedocs.commands.cont import run_continue
+    from livedocs.commands.new import run_new
+
+    if iv.status == "in_progress":
+        run_continue(repo_root, slug=iv.slug)
+    elif iv.status == "generated":
+        run_approve(repo_root, slug=iv.slug)
+    elif iv.status == "draft":
+        # Draft means the skeleton was built but no answers yet — same as
+        # starting fresh on that slug.
+        run_new(repo_root, slug=iv.slug, domain=iv.domain)
