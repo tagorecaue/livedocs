@@ -137,12 +137,31 @@ def run_init(cwd: Path) -> int:
         ui.warn(t("abort"))
         return 130
 
+    # 6.6. Auto-detect `guides_subdir` and scan existing guides
+    # (new in v0.2 D.5)
+    from livedocs.import_existing import (
+        detect_guides_subdir,
+        scan_existing_guides,
+    )
+    from livedocs.state import load_state, save_state
+
+    guides_subdir = detect_guides_subdir(cwd, docs_dir)
+    if guides_subdir:
+        ui.blank()
+        ui.info(
+            t(
+                "init_guides_subdir_detected",
+                subdir=guides_subdir,
+            )
+        )
+
     # 7. Persist
     cfg = ProjectConfig(
         project_slug=slug,
         lang=chosen,
         provider="claude-code",
         docs_dir=docs_dir,
+        guides_subdir=guides_subdir,
         use_graphify=use_graphify,
         style=style_choice,
     )
@@ -155,6 +174,14 @@ def run_init(cwd: Path) -> int:
 
     # Make sure docs_dir exists (we may want to write to it later)
     (cwd / docs_dir).mkdir(parents=True, exist_ok=True)
+
+    # 8. Import existing guides into state (idempotent)
+    state = load_state(cwd)
+    imported = scan_existing_guides(cwd, cfg, state)
+    if imported > 0:
+        save_state(cwd, state)
+        ui.blank()
+        ui.success(t("init_imported_guides", n=imported))
 
     ui.blank()
     ui.success(t("init_done", path=str(config_path(cwd).relative_to(cwd))))

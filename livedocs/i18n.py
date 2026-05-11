@@ -129,6 +129,14 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Para personalizar o estilo: edite [bold]{path}[/bold].",
         "en": "To customize the style: edit [bold]{path}[/bold].",
     },
+    "init_guides_subdir_detected": {
+        "pt-BR": "Layout [bold]{subdir}/<dom>/<slug>.md[/bold] detectado — vou usar.",
+        "en": "Layout [bold]{subdir}/<domain>/<slug>.md[/bold] detected — using it.",
+    },
+    "init_imported_guides": {
+        "pt-BR": "Importei {n} guia(s) existente(s) — rode [bold]livedocs status[/bold] para ver.",
+        "en": "Imported {n} existing guide(s) — run [bold]livedocs status[/bold] to see them.",
+    },
     # ---- free-text intent (rewritten for v0.2 fact-driven flow) ----
     "intent_q": {
         "pt-BR": "O que você quer documentar?",
