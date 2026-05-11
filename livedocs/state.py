@@ -186,7 +186,7 @@ def ensure_gitignore_for_state(repo_root: Path) -> None:
     ld = livedocs_dir(repo_root)
     ld.mkdir(parents=True, exist_ok=True)
     gi = ld / ".gitignore"
-    contents = "state.toml\n*.bak\n"
+    contents = "state.toml\n*.bak\nlogs/\n"
     if not gi.exists() or gi.read_text() != contents:
         gi.write_text(contents)
 
