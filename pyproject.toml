@@ -57,8 +57,21 @@ packages = ["livedocs"]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
     "ruff>=0.4.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "e2e: end-to-end tests that spawn the real Claude Code subprocess (cost real $)",
+    "slow: tests that take more than a couple seconds",
+]
+# Default: skip e2e (opt-in via `pytest -m e2e`)
+addopts = "-m 'not e2e'"
 
 [tool.ruff]
 line-length = 100
