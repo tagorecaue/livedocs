@@ -188,5 +188,12 @@ def run_init(cwd: Path) -> int:
     ui.blank()
     ui.success(t("init_done", path=str(config_path(cwd).relative_to(cwd))))
     ui.hint(t("init_style_customize", path=".livedocs/style.md"))
-    ui.hint(t("init_next_step"))
-    return 0
+
+    # Flow continuation: instead of telling the user to run `livedocs`,
+    # open the menu right here. We import lazily to avoid a circular import
+    # (root.py imports run_init via run_init_entry).
+    from livedocs.commands.root import run_root
+    from livedocs.state import find_repo_root
+
+    repo_root = find_repo_root(cwd) or cwd
+    return run_root(repo_root)
