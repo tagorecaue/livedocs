@@ -106,10 +106,8 @@ def run_root(repo_root: Path | None) -> int:
         "status",
     ))
 
-    choices.append((
-        "Revisar guias (front-matter, links, …)" if cfg.lang == "pt-BR" else "Review guides (front-matter, links, …)",
-        "review",
-    ))
+    # `review` (front-matter lint) is still available as `livedocs review`
+    # subcommand, but removed from the menu — too technical to surface here.
 
     choices.append((t("exit"), "exit"))
 
