@@ -678,6 +678,25 @@ def generate_guides(
         ]
         global_state.next_recommendations.append(nr)
 
+    # ----- Phase D.6 — update domain _index.md -----
+    # The newly-generated guide joins the domain catalog and the
+    # next-recommendation pointer is refreshed. This is metadata-only,
+    # never touches guide bodies.
+    if global_state is not None:
+        try:
+            from livedocs.index_md import update_domain_index
+
+            update_domain_index(
+                repo_root,
+                cfg,
+                interview.domain,
+                global_state.interviews,
+                next_recommendation=next_rec,
+                lang=cfg.lang,
+            )
+        except Exception as e:
+            ui.warn(f"_index.md update skipped: {e}")
+
     ui.success(t("interview_complete"))
     if interview.total_cost_usd > 0 or interview.agent_calls > 0:
         ui.console.print(

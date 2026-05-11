@@ -48,8 +48,11 @@ status: draft | reviewed | stale
 4. Fluxos principais / Main flows (mermaid welcome)
 5. Casos do dia a dia / Day-to-day cases
 6. Convivência com vizinhos / Interaction with neighboring domains
-7. Próximo guia / Next guide
-8. Veja também / See also
+7. Veja também / See also
+
+The "next guide" recommendation is **metadata, not content**. It lives in
+the domain's `_index.md` (the nav file). Never write a "Próximo guia" /
+"Next guide" section inside the guide body itself.
 
 ## Standard sections (tecnico, in order)
 

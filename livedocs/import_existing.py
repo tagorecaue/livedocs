@@ -121,7 +121,40 @@ def scan_existing_guides(
             state.interviews[slug] = iv
             imported += 1
 
+        # Phase D.6 — pull "next recommendation" out of any existing _index.md
+        # so the menu can surface it. Best-effort: silently ignore parse failures.
+        _import_next_recommendation_from_index(domain_dir, state)
+
     return imported
+
+
+def _import_next_recommendation_from_index(domain_dir: Path, state) -> None:
+    """If `<domain_dir>/_index.md` contains a Próxima recomendação section,
+    register it in state.next_recommendations. Idempotent."""
+    from livedocs.index_md import parse_next_recommendation
+    from livedocs.models import NextRecommendation
+
+    index_path = domain_dir / "_index.md"
+    parsed = parse_next_recommendation(index_path)
+    if not parsed:
+        return
+
+    slug = str(parsed.get("slug") or "").strip()
+    if not slug:
+        return
+
+    # Skip duplicates (same slug already tracked).
+    if any(r.slug == slug for r in state.next_recommendations):
+        return
+
+    state.next_recommendations.append(
+        NextRecommendation(
+            slug=slug,
+            domain=domain_dir.name,
+            reason=str(parsed.get("reason") or "").strip(),
+            suggested_by="(imported from _index.md)",
+        )
+    )
 
 
 # ---------------------------------------------------------------------------

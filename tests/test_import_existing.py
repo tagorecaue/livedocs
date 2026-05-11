@@ -17,7 +17,6 @@ from livedocs.import_existing import (
 )
 from livedocs.models import GlobalState, ProjectConfig
 
-
 # ---------------------------------------------------------------------------
 # detect_guides_subdir
 # ---------------------------------------------------------------------------

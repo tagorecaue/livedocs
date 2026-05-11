@@ -396,15 +396,17 @@ three markdown files using your Write tool.
 
 1. **`{full_dir}/{slug}.md`** — `flavor: produto`
    - Audience: end-user, support, product. NO technical jargon.
-   - 8 sections in order:
+   - 7 sections in order:
      1. Por que isso existe (Why this exists)
      2. Como o usuário vivencia (User experience)
      3. Conceitos-chave (Key concepts)
      4. Fluxos principais (Main flows — mermaid welcome)
      5. Casos do dia a dia (Day-to-day cases)
      6. Convivência com vizinhos (Neighbors interaction — when applicable)
-     7. Próximo guia (Next guide)
-     8. Veja também (See also)
+     7. Veja também (See also)
+   - DO NOT write a "next guide" / "próximo guia" section in the body.
+     The next-step recommendation is metadata — it lives in the domain's
+     `_index.md` and in the JSON output below, never in the guide itself.
    - Front-matter:
      ```yaml
      ---
