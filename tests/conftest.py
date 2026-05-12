@@ -223,6 +223,7 @@ def mock_agent(monkeypatch: pytest.MonkeyPatch) -> MockAgent:
     modules = [
         "livedocs.agent",
         "livedocs.commands.interview",
+        "livedocs.commands.refine",
         "livedocs.evaluator",
         "livedocs.iteration",
         "livedocs.commands.inbox",

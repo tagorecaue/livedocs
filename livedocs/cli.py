@@ -12,6 +12,7 @@ from livedocs.commands.cont import run_continue
 from livedocs.commands.inbox import run_inbox
 from livedocs.commands.init import run_init
 from livedocs.commands.new import run_new
+from livedocs.commands.refine import run_refine
 from livedocs.commands.review import run_review
 from livedocs.commands.root import run_root
 from livedocs.commands.status import run_status
@@ -168,6 +169,26 @@ def cmd_inbox() -> None:
         raise typer.Exit(code=1)
     _bootstrap_lang(repo_root)
     rc = run_inbox(repo_root)
+    raise typer.Exit(code=rc)
+
+
+@app.command(
+    "refine",
+    help="Apply a free-form instruction to refine an existing guide.",
+)
+def cmd_refine(
+    slug: str = typer.Argument(None, help="Slug of the guide to refine (defaults to interactive picker)."),
+    instruction: str = typer.Option(
+        None, "--instruction", "-i", help="Instruction text (otherwise asked interactively)."
+    ),
+) -> None:
+    cwd = Path.cwd()
+    repo_root = find_repo_root(cwd)
+    if repo_root is None:
+        ui.error(t("err_no_project"))
+        raise typer.Exit(code=1)
+    _bootstrap_lang(repo_root)
+    rc = run_refine(repo_root, slug=slug, instruction=instruction)
     raise typer.Exit(code=rc)
 
 

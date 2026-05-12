@@ -14,6 +14,7 @@ from livedocs.commands.approve import run_approve
 from livedocs.commands.cont import run_continue
 from livedocs.commands.init import run_init
 from livedocs.commands.new import run_new
+from livedocs.commands.refine import run_refine
 from livedocs.commands.review import run_review
 from livedocs.commands.status import run_status
 from livedocs.detect import has_claude_code
@@ -133,6 +134,10 @@ def _render_menu_and_pick(repo_root: Path, cfg, state) -> str | None:
         "status",
     ))
 
+    # Show "Refine a guide" if there's at least one reviewed or generated guide
+    if any(iv.status in ("reviewed", "generated") for iv in state.interviews.values()):
+        choices.append((t("refine_menu_option"), "refine"))
+
     # `review` (front-matter lint) is still available as `livedocs review`
     # subcommand, but removed from the menu — too technical to surface here.
 
@@ -157,6 +162,11 @@ def _dispatch(repo_root: Path, picked: str) -> None:
         rc = run_status(repo_root) or 0
     elif picked == "review":
         rc = run_review(repo_root) or 0
+    elif picked == "refine":
+        rc = run_refine(repo_root) or 0
+    elif picked.startswith("refine:"):
+        slug = picked.split(":", 1)[1]
+        rc = run_refine(repo_root, slug=slug) or 0
     elif picked.startswith("continue:"):
         slug = picked.split(":", 1)[1]
         rc = run_continue(repo_root, slug=slug) or 0

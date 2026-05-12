@@ -698,6 +698,122 @@ Output ONLY the JSON.
 # REVERSE-LINK SWEEP — after human approves, propose entries in other guides
 # -----------------------------------------------------------------------------
 
+PROMPT_REFINE_GUIDE = """\
+# Task: Refine an existing guide based on a free-form instruction
+
+The user has an existing pair of guides (`produto.md` + `tech.md`) and wants
+to apply a refinement. They wrote the instruction in their own words; you
+need to interpret it, decide what to do (rewrite a section, add a use case,
+re-check code, simplify tone, etc.), and produce surgical edits.
+
+## Inputs
+
+- Guide slug: `{slug}`
+- Domain: `{domain}`
+- Output language: **{lang}**
+- Repo root: `{repo_root}`
+- Style guide for produto-flavored content:
+
+---
+{style_md}
+---
+
+## Current state of the guides
+
+### produto.md  (path: `{produto_path}`)
+
+```markdown
+{produto_content}
+```
+
+### tech.md  (path: `{tech_path}`)
+
+```markdown
+{tech_content}
+```
+
+## Compact fact context
+
+{facts_compact}
+
+## User instruction
+
+---
+{user_instruction}
+---
+
+## What to do
+
+1. Parse the instruction. It can be:
+   - Add content (new section/case/example/diagram)
+   - Reformulate content (change tone, fix wording, simplify)
+   - Remove content (drop a confusing reference, prune a section)
+   - Cross-check code (use Read/Glob/Grep — confirm or correct claims)
+   - Mixed combinations of the above
+
+2. Decide if you need to read code. If the instruction asks you to verify
+   or update technical claims, USE THE TOOLS. If it's purely a wording/tone/
+   structure change, you don't need to.
+
+3. Produce SURGICAL EDITS as a list of `changes`. Each change is one
+   exact substring replacement in one file. Rules:
+   - `old` must appear EXACTLY ONCE in the target file (verbatim, including
+     whitespace, headings, blank lines). If you can't find a unique anchor,
+     widen the `old` to include surrounding lines until it's unique.
+   - `new` is what replaces it.
+   - To add content: include the line before AND after the insertion point in
+     `old`, with `new` containing the same surrounding lines + your insertion.
+   - To remove content: `old` is the text to remove (with anchoring context),
+     `new` is what remains.
+   - One file per change. Multiple changes in the same file are fine — they
+     apply in order.
+
+4. NEVER touch:
+   - YAML front-matter (slug, domain, status, source_files, etc.). The CLI
+     manages these. Don't include them in `old` or `new`.
+   - `_index.md` files. The CLI rewrites them automatically.
+
+5. Prefer the produto.md style guide above when refining the product guide.
+   Stay technical and code-anchored on tech.md.
+
+## Output (STRICT JSON)
+
+{{
+  "summary": "One-paragraph in {lang} explaining what you did and why",
+  "changes": [
+    {{
+      "file": "packages/docs/guides/<domain>/<slug>.md",
+      "old": "exact substring (unique in file)",
+      "new": "replacement",
+      "reason": "why this change in {lang}"
+    }}
+  ],
+  "code_checks_performed": [
+    {{
+      "what": "Verified that the auto-cancellation rule still uses 24h",
+      "where": "packages/api/src/services/contracts/autoTerminationService.ts:42",
+      "outcome": "confirmed / corrected"
+    }}
+  ]
+}}
+
+If the instruction is impossible (e.g., refers to content that doesn't exist
+in the guide and can't be added meaningfully), return:
+
+{{
+  "summary": "Brief explanation in {lang} of why no changes were made",
+  "changes": [],
+  "code_checks_performed": []
+}}
+
+Output ONLY the JSON object.
+"""
+
+
+# -----------------------------------------------------------------------------
+# REVERSE-LINK SWEEP — after human approves, propose entries in other guides
+# -----------------------------------------------------------------------------
+
 PROMPT_REVERSE_LINK_SWEEP = """\
 # Task: Propose reverse cross-links
 

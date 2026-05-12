@@ -449,6 +449,71 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "{n} fato(s) extraído(s) da sua resposta.",
         "en": "{n} fact(s) extracted from your answer.",
     },
+    # ---- `livedocs refine` — apply free-form instruction to existing guide ----
+    "refine_title": {
+        "pt-BR": "Refinar guia: {slug}",
+        "en": "Refine guide: {slug}",
+    },
+    "refine_hint": {
+        "pt-BR": "Escreva o que você quer mudar. Exemplos: 'adicione um caso de "
+                 "uso sobre estorno', 'tom mais narrativo na seção X', "
+                 "'confira se R5 ainda bate com o código'.",
+        "en": "Write what you want to change. Examples: 'add a use case about "
+              "refunds', 'narrative tone in section X', 'recheck R5 against the "
+              "current code'.",
+    },
+    "refine_prompt": {
+        "pt-BR": "Instrução de refinamento (deixe em branco para cancelar)",
+        "en": "Refinement instruction (leave blank to cancel)",
+    },
+    "refine_thinking": {
+        "pt-BR": "Refinando guia",
+        "en": "Refining guide",
+    },
+    "refine_failed": {
+        "pt-BR": "Falha ao refinar — agente não devolveu JSON válido.",
+        "en": "Refine failed — agent did not return valid JSON.",
+    },
+    "refine_no_changes": {
+        "pt-BR": "O agente decidiu não fazer mudanças.",
+        "en": "The agent decided not to make any changes.",
+    },
+    "refine_done": {
+        "pt-BR": "{n} mudança(s) aplicada(s) em {files} arquivo(s).",
+        "en": "{n} change(s) applied to {files} file(s).",
+    },
+    "refine_status_flipped": {
+        "pt-BR": "Status voltou para [bold]generated[/bold] — re-aprove com "
+                 "[bold]livedocs approve[/bold] quando estiver satisfeito.",
+        "en": "Status flipped back to [bold]generated[/bold] — re-approve with "
+              "[bold]livedocs approve[/bold] when you're satisfied.",
+    },
+    "refine_code_checks": {
+        "pt-BR": "Verificações no código durante o refinamento:",
+        "en": "Code checks performed during the refinement:",
+    },
+    "refine_status_blocked": {
+        "pt-BR": "Não dá para refinar [bold]{slug}[/bold] no status [bold]{status}[/bold]. "
+                 "Use [bold]livedocs continue[/bold] ou [bold]livedocs new[/bold].",
+        "en": "Cannot refine [bold]{slug}[/bold] while it's [bold]{status}[/bold]. "
+              "Use [bold]livedocs continue[/bold] or [bold]livedocs new[/bold].",
+    },
+    "refine_no_eligible": {
+        "pt-BR": "Nenhum guia em estado [bold]generated[/bold] ou [bold]reviewed[/bold] para refinar.",
+        "en": "No guides in [bold]generated[/bold] or [bold]reviewed[/bold] state to refine.",
+    },
+    "refine_file_missing": {
+        "pt-BR": "Arquivo do guia não encontrado em disco: {path}",
+        "en": "Guide file not found on disk: {path}",
+    },
+    "refine_pick_guide": {
+        "pt-BR": "Qual guia você quer refinar?",
+        "en": "Which guide do you want to refine?",
+    },
+    "refine_menu_option": {
+        "pt-BR": "Refinar um guia (instrução livre)",
+        "en": "Refine a guide (free-form instruction)",
+    },
     # ---- Phase D.1 — Post-generation evaluators ----
     "eval_running": {
         "pt-BR": "Auditando o guia gerado em 3 dimensões",
