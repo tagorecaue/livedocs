@@ -10,6 +10,7 @@ from livedocs.agent import (
     _logs_dir,
     _purpose_from_prompt,
     _write_call_log,
+    event_to_progress,
     extract_json,
 )
 
@@ -284,3 +285,122 @@ class TestGitignoreCoversLogs:
         gi = tmp_path / ".livedocs" / ".gitignore"
         contents = gi.read_text()
         assert "logs/" in contents
+
+
+# ---------------------------------------------------------------------------
+# event_to_progress — translate stream events into human progress labels
+# ---------------------------------------------------------------------------
+
+class TestEventToProgress:
+    def test_read_tool_use(self) -> None:
+        event = {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "tool_use", "name": "Read",
+                     "input": {"file_path": "/repo/foo.py"}}
+                ]
+            },
+        }
+        from pathlib import Path
+        # Without repo_root, returns absolute path verbatim
+        assert event_to_progress(event) == "Lendo /repo/foo.py"
+        # With repo_root, relativizes
+        result = event_to_progress(event, Path("/repo"))
+        assert result == "Lendo foo.py"
+
+    def test_glob_tool_use(self) -> None:
+        event = {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "tool_use", "name": "Glob",
+                     "input": {"pattern": "**/*.vue"}}
+                ]
+            },
+        }
+        assert event_to_progress(event) == "Buscando arquivos: **/*.vue"
+
+    def test_grep_tool_use_with_path(self) -> None:
+        from pathlib import Path
+        event = {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "tool_use", "name": "Grep",
+                     "input": {"pattern": "split_partner", "path": "/repo/src"}}
+                ]
+            },
+        }
+        result = event_to_progress(event, Path("/repo"))
+        assert "split_partner" in result
+        assert "src" in result
+
+    def test_grep_tool_use_without_path(self) -> None:
+        event = {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "tool_use", "name": "Grep",
+                     "input": {"pattern": "foo"}}
+                ]
+            },
+        }
+        result = event_to_progress(event)
+        assert "foo" in result
+        # No path suffix
+        assert " em " not in result
+
+    def test_write_tool_use(self) -> None:
+        from pathlib import Path
+        event = {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "tool_use", "name": "Write",
+                     "input": {"file_path": "/repo/docs/x.md"}}
+                ]
+            },
+        }
+        assert "Escrevendo" in event_to_progress(event, Path("/repo"))
+
+    def test_unknown_tool_returns_none(self) -> None:
+        event = {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "tool_use", "name": "WeirdNewTool", "input": {}}
+                ]
+            },
+        }
+        assert event_to_progress(event) is None
+
+    def test_thinking_returns_none(self) -> None:
+        """Thinking chunks are noisy — spinner already implies the agent is working."""
+        event = {
+            "type": "assistant",
+            "message": {"content": [{"type": "thinking", "thinking": "..."}]},
+        }
+        assert event_to_progress(event) is None
+
+    def test_system_init_returns_none(self) -> None:
+        event = {"type": "system", "subtype": "init"}
+        assert event_to_progress(event) is None
+
+    def test_result_returns_none(self) -> None:
+        event = {"type": "result", "subtype": "success"}
+        assert event_to_progress(event) is None
+
+    def test_user_tool_result_returns_none(self) -> None:
+        """Tool result events shouldn't trigger a UI update."""
+        event = {"type": "user", "message": {"content": [{"type": "tool_result"}]}}
+        assert event_to_progress(event) is None
+
+    def test_malformed_event_returns_none(self) -> None:
+        # Not a dict
+        assert event_to_progress("not a dict") is None
+        assert event_to_progress(None) is None
+        # Missing fields
+        assert event_to_progress({}) is None
+        assert event_to_progress({"type": "assistant"}) is None
+        assert event_to_progress({"type": "assistant", "message": {}}) is None

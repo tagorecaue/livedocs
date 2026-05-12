@@ -188,8 +188,8 @@ Output ONLY the JSON object.
 """
 
     try:
-        with ui.spinner(t("iter_applying", n=len(issues))):
-            result = agent.call(prompt, expect_json=True, timeout=300)
+        with ui.progress_spinner(t("iter_applying", n=len(issues))) as update:
+            result = agent.call(prompt, expect_json=True, timeout=300, on_progress=update)
     except AgentError as e:
         ui.warn(f"Auto-fix call failed: {e}")
         return []

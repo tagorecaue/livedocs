@@ -178,6 +178,8 @@ class MockAgent:
         expect_json: bool = False,
         timeout: int = 60,
         extra_system: str | None = None,
+        json_schema: dict | None = None,
+        on_progress=None,
     ) -> _AgentResultStub:
         self.calls.append(
             {
@@ -185,6 +187,7 @@ class MockAgent:
                 "expect_json": expect_json,
                 "timeout": timeout,
                 "extra_system": extra_system,
+                "on_progress": on_progress,
             }
         )
         for pred, results in self._matchers:
@@ -269,4 +272,14 @@ def _silence_ui(monkeypatch: pytest.MonkeyPatch) -> None:
     def _null_spinner(*args: Any, **kwargs: Any):
         yield
 
+    @contextmanager
+    def _null_progress_spinner(*args: Any, **kwargs: Any):
+        # progress_spinner yields a callable (the update fn). Tests don't care
+        # what we pass to it — just need something that's safe to invoke.
+        def update(_label: str) -> None:
+            return
+
+        yield update
+
     monkeypatch.setattr(ui, "spinner", _null_spinner)
+    monkeypatch.setattr(ui, "progress_spinner", _null_progress_spinner)

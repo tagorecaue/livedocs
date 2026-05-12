@@ -6,7 +6,7 @@ Just clear hierarchy with color and spacing.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 
 import questionary
@@ -252,7 +252,7 @@ def ask_path(message: str, *, default: str = "", only_directories: bool = False)
 
 @contextmanager
 def spinner(message: str) -> Iterator[None]:
-    """Indeterminate spinner during a blocking task."""
+    """Indeterminate spinner during a blocking task (static message)."""
     with Progress(
         SpinnerColumn(style="brand"),
         TextColumn("[progress.description]{task.description}"),
@@ -261,6 +261,36 @@ def spinner(message: str) -> Iterator[None]:
     ) as p:
         p.add_task(description=message, total=None)
         yield
+
+
+@contextmanager
+def progress_spinner(initial: str) -> Iterator[Callable[[str], None]]:
+    """Spinner whose message can be updated during the block.
+
+    Yields a callable: pass it a new label and the spinner text refreshes.
+    Used for streaming agent calls — each tool use ("Lendo X", "Procurando Y")
+    becomes a new label.
+
+    Usage:
+        with ui.progress_spinner("Lendo código…") as update:
+            agent.call(..., on_progress=update)
+    """
+    with Progress(
+        SpinnerColumn(style="brand"),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+        transient=True,
+    ) as p:
+        task_id = p.add_task(description=initial, total=None)
+
+        def update(label: str) -> None:
+            # Truncate very long labels so the spinner stays on one line.
+            label = label.strip()
+            if len(label) > 100:
+                label = label[:97] + "…"
+            p.update(task_id, description=label)
+
+        yield update
 
 
 # ---------------------------------------------------------------------------

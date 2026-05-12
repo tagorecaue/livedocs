@@ -170,8 +170,8 @@ def build_skeleton(
     ui.info(t("skeleton_building", slug=slug))
 
     try:
-        with ui.spinner(t("skeleton_thinking")):
-            result = agent.call(prompt, expect_json=True, timeout=480)
+        with ui.progress_spinner(t("skeleton_thinking")) as update:
+            result = agent.call(prompt, expect_json=True, timeout=480, on_progress=update)
     except AgentError as e:
         ui.error(str(e))
         return None
@@ -653,8 +653,8 @@ def pregen_self_audit(
     )
 
     try:
-        with ui.spinner(t("pregen_audit")):
-            result = agent.call(prompt, expect_json=True, timeout=120)
+        with ui.progress_spinner(t("pregen_audit")) as update:
+            result = agent.call(prompt, expect_json=True, timeout=120, on_progress=update)
     except AgentError as e:
         ui.warn(f"Self-audit skipped: {e}")
         return True, {}
@@ -739,8 +739,8 @@ def generate_guides(
 
     ui.blank()
     try:
-        with ui.spinner(t("interview_generating")):
-            result = agent.call(prompt, expect_json=False, timeout=600)
+        with ui.progress_spinner(t("interview_generating")) as update:
+            result = agent.call(prompt, expect_json=False, timeout=600, on_progress=update)
     except AgentError as e:
         ui.error(str(e))
         return False
