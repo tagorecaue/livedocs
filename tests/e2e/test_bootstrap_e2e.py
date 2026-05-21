@@ -153,6 +153,15 @@ def test_bootstrap_e2e_mini_saas(mini_saas_repo, mock_agent, monkeypatch):
     # We still want the refinement interview to RUN, so flip non-interactive
     # off but stub `ui.ask_text` to feed canned answers.
     monkeypatch.setattr("livedocs.ui.is_non_interactive", lambda: False)
+    # Skip the interactive pass1 selector — generate all pending in one go.
+    monkeypatch.setattr(
+        "livedocs.bootstrap.pass1_selector.select_pass1_scope",
+        lambda state: (
+            {c.slug for c in (state.taxonomy.capabilities if state.taxonomy else [])},
+            True,
+            "all",
+        ),
+    )
     # Disable real graphify CLI invocation in scan phase.
     monkeypatch.setattr("livedocs.bootstrap.scanner.shutil.which", lambda _cmd: None)
 

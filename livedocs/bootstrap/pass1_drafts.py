@@ -144,16 +144,27 @@ def _render_prompt(
 _SKIP_STATUSES = {"drafted", "stitched", "refined"}
 
 
-def _iter_targets(state: BootstrapState) -> list[tuple[str, Any, Capability | None]]:
-    """Flatten taxonomy into (kind, item, parent_cap_or_None) draft targets."""
+def _iter_targets(
+    state: BootstrapState,
+    capability_filter: set[str] | None = None,
+    include_journeys: bool = True,
+) -> list[tuple[str, Any, Capability | None]]:
+    """Flatten taxonomy into (kind, item, parent_cap_or_None) draft targets.
+
+    `capability_filter`: if not None, only include articles from these
+    capability slugs (and only include journeys when `include_journeys`).
+    """
     out: list[tuple[str, Any, Capability | None]] = []
     if state.taxonomy is None:
         return out
     for c in state.taxonomy.capabilities:
+        if capability_filter is not None and c.slug not in capability_filter:
+            continue
         for a in c.articles:
             out.append(("capability", a, c))
-    for j in state.taxonomy.journeys:
-        out.append(("journey", j, None))
+    if include_journeys:
+        for j in state.taxonomy.journeys:
+            out.append(("journey", j, None))
     return out
 
 
@@ -162,8 +173,14 @@ def run_pass1(
     cfg: ProjectConfig,
     state: BootstrapState,
     on_guide_done: GuideDoneCallback | None = None,
+    capability_filter: set[str] | None = None,
+    include_journeys: bool = True,
 ) -> None:
-    """Run passada 1 over every article+journey in the approved taxonomy."""
+    """Run passada 1 over every article+journey in the approved taxonomy.
+
+    `capability_filter` restricts to a subset of capability slugs; pass
+    `include_journeys=False` to skip journeys this round.
+    """
     if state.taxonomy is None:
         return
 
@@ -172,11 +189,27 @@ def run_pass1(
     menu_index = _build_menu_index(state)
     docs_dir = cfg.docs_dir.strip("/") or "docs"
 
-    targets = _iter_targets(state)
+    targets = _iter_targets(state, capability_filter, include_journeys)
 
     agent = ClaudeAgent(repo_root=repo_root, lang=cfg.lang)
     allowed_tools = ["Read", "Glob", "Grep", "Write"]
 
+    total = len(targets)
+    pending_targets = [
+        (k, i, p) for (k, i, p) in targets
+        if _get_or_create_record(
+            state,
+            f"{p.slug}/{i.slug}" if k == "capability" else i.slug,
+            k,
+        ).status not in _SKIP_STATUSES
+    ]
+    if not pending_targets:
+        ui.info("Nada a gerar — todos os artigos selecionados já estão prontos.")
+        return
+    ui.info(f"Iniciando passada 1: {len(pending_targets)} artigo(s) a gerar (de {total} no escopo).")
+
+    import time
+    counter = 0
     for kind, item, parent in targets:
         if kind == "capability":
             assert isinstance(item, Article) and isinstance(parent, Capability)
@@ -205,6 +238,9 @@ def run_pass1(
 
         rec.status = "drafting"
         save_bootstrap_state(repo_root, state)
+        counter += 1
+        ui.info(f"[{counter}/{len(pending_targets)}] iniciando: {record_slug}…")
+        t0 = time.monotonic()
 
         kind_subdir = _kind_dir(kind)
         if rel_dir:
@@ -316,6 +352,12 @@ def run_pass1(
         rec.status = "drafted"
         rec.draft_cost_usd += float(result.cost_usd or 0.0)
         state.total_cost_usd += float(result.cost_usd or 0.0)
+        elapsed = time.monotonic() - t0
+        ui.success(
+            f"[{counter}/{len(pending_targets)}] {record_slug}: "
+            f"✓ {elapsed:.0f}s · US${rec.draft_cost_usd:.2f} "
+            f"(acumulado US${state.total_cost_usd:.2f})"
+        )
         save_bootstrap_state(repo_root, state)
 
         if on_guide_done is not None:

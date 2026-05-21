@@ -164,20 +164,44 @@ def run_bootstrap(
     if state.last_completed_phase < 4:
         ui.section(t("bootstrap_phase_pass1"))
         assert state.taxonomy is not None
-        total = len(state.taxonomy.capabilities) + len(state.taxonomy.journeys)
-        counter = {"n": 0}
+        from livedocs.bootstrap.pass1_selector import select_pass1_scope
 
-        def _on_draft_done(rec, _total=total, _counter=counter):
-            _counter["n"] += 1
-            ui.info(
-                f"[{_counter['n']}/{_total}] {rec.slug} → {rec.status} "
-                f"(US${rec.draft_cost_usd:.4f})"
+        cap_filter, include_journeys, mode = select_pass1_scope(state)
+
+        if mode == "all_done":
+            ui.success("Todos os artigos já foram gerados — passada 1 completa.")
+            state.status = "stitching"
+            state.last_completed_phase = 4
+            save_bootstrap_state(repo_root, state)
+        elif mode == "abort":
+            ui.info("Passada 1 pausada. Rode `livedocs bootstrap` quando quiser continuar.")
+            return 0
+        else:
+            run_pass1(
+                repo_root, cfg, state,
+                capability_filter=cap_filter,
+                include_journeys=include_journeys,
             )
 
-        run_pass1(repo_root, cfg, state, on_guide_done=_on_draft_done)
-        state.status = "stitching"
-        state.last_completed_phase = 4
-        save_bootstrap_state(repo_root, state)
+            # Check if there's still pending work; if so, stop here without
+            # marking phase 4 complete so the next run shows the selector again.
+            still_pending = any(
+                g.status not in ("drafted", "stitched", "refined")
+                for g in state.guides
+            )
+            # Also pending: articles/journeys for which no GuideRecord exists yet
+            # (untouched capabilities).
+            expected_count = sum(len(c.articles) for c in state.taxonomy.capabilities) + len(state.taxonomy.journeys)
+            untouched = expected_count > len(state.guides)
+            if still_pending or untouched:
+                ui.info(
+                    "Lote concluído. Ainda há artigos pendentes — "
+                    "rode `livedocs bootstrap` de novo para continuar."
+                )
+                return 0
+            state.status = "stitching"
+            state.last_completed_phase = 4
+            save_bootstrap_state(repo_root, state)
 
     # --- Phase 5 --- Passada 2: costura ------------------------------------
     if state.last_completed_phase < 5:
