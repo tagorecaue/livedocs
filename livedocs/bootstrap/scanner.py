@@ -102,61 +102,103 @@ def _detect_commit_sha(repo_root: Path) -> str | None:
 # ---------------------------------------------------------------------------
 # 2. graphify
 #
-# graphify creates the initial graph via an LLM-driven SKILL (e.g. the
-# `/graphify` slash command in Claude Code), NOT via the CLI. The CLI's
-# `update <path>` only refreshes an existing graph.
+# graphify creates the initial graph in two ways:
+#   (a) via an LLM-driven SKILL inside Claude Code / Codex / etc (`/graphify`)
+#   (b) via the headless `graphify extract <path> --backend <X>` CLI command
 #
-# So the contract here is: livedocs is a CONSUMER of a graph the user
-# already produced. We look for `<repo>/graphify-out/graph.json` (the
-# default location). If found, we copy/reference it into our cache. If
-# not found, we warn and continue without graph signal — other scan
-# sources (routes, i18n, models) still drive the taxonomy.
+# livedocs uses (b) with `--backend claude-cli` so it reuses the same Claude
+# subscription the agent already authenticates with — no extra API key.
+#
+# Idempotency: if `<repo>/graphify-out/graph.json` already exists we either
+# refresh it via `graphify update` or skip the LLM extraction entirely. The
+# scan phase is rerunnable cheaply.
 # ---------------------------------------------------------------------------
 
+GRAPHIFY_EXTRACT_TIMEOUT = 1800  # 30 min for medium repos
+
+
 def _locate_graphify_output(repo_root: Path) -> Path | None:
-    """Find an existing graphify-out/graph.json in the repo."""
     candidate = repo_root / "graphify-out" / "graph.json"
     if candidate.is_file():
         return candidate
     return None
 
 
-def _run_graphify(repo_root: Path, out_path: Path) -> Path | None:
-    """Locate a graphify graph and (optionally) refresh it via `graphify update`.
+def _extract_graph_via_cli(repo_root: Path, backend: str = "claude-cli") -> Path | None:
+    """Headless graph extraction via `graphify extract --backend <X>`.
 
-    Strategy:
-      1. If `<repo>/graphify-out/graph.json` exists, optionally refresh it via
-         `graphify update <repo>` (best-effort, --force to overwrite shrinking
-         graphs) and return that path.
-      2. If it doesn't exist, emit a hint telling the user how to bootstrap
-         the graph (via the `/graphify` skill in Claude Code) and return None.
-      3. We never invent or call a non-existent `graphify scan` subcommand.
+    Runs from the repo root so graphify writes to `<repo>/graphify-out/`.
+    Returns the path to the produced graph.json on success, None on failure.
     """
-    existing = _locate_graphify_output(repo_root)
-    if existing is None:
-        if shutil.which("graphify") is None:
-            ui.warn(t("bootstrap_graphify_missing"))
-        else:
-            ui.warn(
-                "Nenhum grafo do graphify encontrado em graphify-out/graph.json. "
-                "Rode `/graphify` em Claude Code (ou equivalente) dentro deste repo "
-                "uma vez para gerar o grafo inicial; livedocs vai consumi-lo na "
-                "próxima execução. Seguindo sem sinal de grafo."
-            )
+    ui.info(
+        f"Extraindo grafo do código com graphify (backend={backend}). "
+        "Isso pode levar alguns minutos em repos grandes…"
+    )
+    try:
+        result = subprocess.run(  # noqa: S603,S607 — trusted
+            ["graphify", "extract", ".", "--backend", backend, "--no-viz"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=GRAPHIFY_EXTRACT_TIMEOUT,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        ui.warn(f"graphify extract falhou ({e}); seguindo sem grafo.")
         return None
 
-    # Try a best-effort refresh — non-fatal if it fails.
-    if shutil.which("graphify") is not None:
-        try:
-            subprocess.run(  # noqa: S603,S607 — trusted
-                ["graphify", "update", str(repo_root), "--force"],
-                capture_output=True,
-                text=True,
-                timeout=300,
-                check=False,
-            )
-        except (OSError, subprocess.TimeoutExpired) as e:
-            ui.warn(f"graphify update failed (kept existing graph): {e}")
+    if result.returncode != 0:
+        stderr_tail = (result.stderr or "").strip()[-400:]
+        ui.warn(
+            f"graphify extract retornou {result.returncode}; seguindo sem grafo. "
+            f"stderr: {stderr_tail}"
+        )
+        return None
+
+    produced = _locate_graphify_output(repo_root)
+    if produced is None:
+        ui.warn("graphify extract terminou mas graphify-out/graph.json não apareceu; seguindo sem grafo.")
+    return produced
+
+
+def _refresh_existing_graph(repo_root: Path) -> None:
+    """Best-effort `graphify update --force` on an existing graph. Non-fatal."""
+    try:
+        subprocess.run(  # noqa: S603,S607
+            ["graphify", "update", ".", "--force"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=600,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        ui.warn(f"graphify update falhou (mantendo grafo existente): {e}")
+
+
+def _run_graphify(repo_root: Path, out_path: Path) -> Path | None:
+    """Produce or refresh a graphify graph for the repo.
+
+    Strategy:
+      1. If `<repo>/graphify-out/graph.json` exists → refresh with `update`
+         (best-effort) and return.
+      2. Otherwise, run `graphify extract . --backend claude-cli` to build
+         the graph from scratch using the Claude Code CLI subscription.
+      3. If graphify is not installed → emit hint and return None.
+    """
+    if shutil.which("graphify") is None:
+        ui.warn(t("bootstrap_graphify_missing"))
+        return None
+
+    existing = _locate_graphify_output(repo_root)
+    if existing is None:
+        produced = _extract_graph_via_cli(repo_root, backend="claude-cli")
+        if produced is None:
+            return None
+        existing = produced
+    else:
+        ui.info("Grafo do graphify encontrado; rodando update incremental…")
+        _refresh_existing_graph(repo_root)
 
     # Mirror into our cache dir so callers always read from a stable path.
     try:
@@ -164,7 +206,7 @@ def _run_graphify(repo_root: Path, out_path: Path) -> Path | None:
         out_path.write_bytes(existing.read_bytes())
         return out_path
     except OSError as e:
-        ui.warn(f"could not cache graphify output ({e}); using source path")
+        ui.warn(f"não consegui copiar saída do graphify ({e}); usando caminho original")
         return existing
 
 
