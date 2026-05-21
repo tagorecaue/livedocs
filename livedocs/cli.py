@@ -71,8 +71,16 @@ def cmd_init() -> None:
     help="Bootstrap a help center for this SaaS from code (seven-phase pipeline).",
 )
 def cmd_bootstrap(
+    restart: bool = typer.Option(
+        False,
+        "--restart",
+        help="Discard prior bootstrap progress and start from phase 0 (asks for confirmation).",
+    ),
     resume: bool = typer.Option(
-        False, "--resume", help="Resume from the last completed phase recorded in bootstrap.toml."
+        False,
+        "--resume",
+        help="[deprecated] Resume is now the default. Kept for backwards compatibility.",
+        hidden=True,
     ),
     re_tax: bool = typer.Option(
         False, "--re-tax", help="Re-run the taxonomy phase while keeping the scan cache."
@@ -97,6 +105,7 @@ def cmd_bootstrap(
     rc = run_bootstrap(
         repo_root,
         resume=resume,
+        restart=restart,
         re_tax=re_tax,
         accept_taxonomy=accept_taxonomy,
         skip_refinement=skip_refinement,

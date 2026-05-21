@@ -41,12 +41,16 @@ from livedocs.state import load_config
 def run_bootstrap(
     repo_root: Path,
     *,
-    resume: bool = False,
+    resume: bool = False,  # kept for backwards compat; ignored (resume is default)
+    restart: bool = False,
     re_tax: bool = False,
     accept_taxonomy: bool = False,
     skip_refinement: bool = False,
 ) -> int:
     """Drive the seven-phase bootstrap pipeline.
+
+    Default behaviour: ALWAYS resume from existing `bootstrap.toml` if present.
+    Pass `restart=True` to discard prior progress and start from phase 0.
 
     Returns the exit code: 0 on success, 1 on config error, 130 on
     user-aborted taxonomy review.
@@ -56,12 +60,43 @@ def run_bootstrap(
         ui.error(t("bootstrap_need_init"))
         return 1
 
-    state = load_bootstrap_state(repo_root) if resume else None
-    if state is None:
+    existing = load_bootstrap_state(repo_root)
+
+    if restart and existing is not None:
+        # Confirm before nuking prior progress.
+        ui.warn(
+            f"Você passou --restart. Isso descarta o progresso atual "
+            f"(fase {existing.last_completed_phase}/7)."
+        )
+        if not ui.is_non_interactive():
+            import questionary
+
+            from livedocs.ui import QUESTIONARY_STYLE
+
+            try:
+                ok = questionary.confirm(
+                    "Confirma descartar e começar do zero?",
+                    default=False,
+                    style=QUESTIONARY_STYLE,
+                ).ask()
+            except (KeyboardInterrupt, EOFError):
+                ok = False
+            if not ok:
+                ui.info("OK, mantendo o estado atual. Rode sem --restart pra retomar.")
+                return 0
+        existing = None
+
+    if existing is None:
         state = BootstrapState(status="scanning", last_completed_phase=-1)
-    elif state.last_completed_phase >= 7 and state.status == "done":
-        ui.success(t("bootstrap_already_done"))
-        return 0
+    else:
+        state = existing
+        if state.last_completed_phase >= 7 and state.status == "done":
+            ui.success(t("bootstrap_already_done"))
+            return 0
+        ui.info(
+            f"Retomando bootstrap da fase {state.last_completed_phase + 1}/7. "
+            "Use --restart pra começar do zero."
+        )
 
     # --- Phase 0 --- Guidance ----------------------------------------------
     if state.last_completed_phase < 0:
