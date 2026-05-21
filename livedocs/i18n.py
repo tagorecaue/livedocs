@@ -393,6 +393,18 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Preview salvo em [bold]{path}[/bold]",
         "en": "Preview written to [bold]{path}[/bold]",
     },
+    "bootstrap_phase_pass1": {
+        "pt-BR": "Fase 4/7 — Gerando rascunhos (passada 1)",
+        "en": "Phase 4/7 — Drafting guides (pass 1)",
+    },
+    "bootstrap_phase_pass2": {
+        "pt-BR": "Fase 5/7 — Costurando guias (passada 2)",
+        "en": "Phase 5/7 — Stitching guides (pass 2)",
+    },
+    "bootstrap_phases_6_7_todo": {
+        "pt-BR": "Fases 6-7 ainda não implementadas. Rode novamente com [bold]livedocs bootstrap --resume[/bold] quando estiverem.",
+        "en": "Phases 6-7 not implemented yet. Run [bold]livedocs bootstrap --resume[/bold] again later.",
+    },
     "bootstrap_phases_4_7_todo": {
         "pt-BR": "Fases 4-7 ainda não implementadas. Rode novamente com [bold]livedocs bootstrap --resume[/bold] quando estiverem.",
         "en": "Phases 4-7 not implemented yet. Run [bold]livedocs bootstrap --resume[/bold] again later.",

@@ -180,6 +180,7 @@ class MockAgent:
         extra_system: str | None = None,
         json_schema: dict | None = None,
         on_progress=None,
+        allowed_tools: list[str] | None = None,
     ) -> _AgentResultStub:
         self.calls.append(
             {
@@ -188,6 +189,7 @@ class MockAgent:
                 "timeout": timeout,
                 "extra_system": extra_system,
                 "on_progress": on_progress,
+                "allowed_tools": allowed_tools,
             }
         )
         for pred, results in self._matchers:
@@ -223,6 +225,8 @@ def mock_agent(monkeypatch: pytest.MonkeyPatch) -> MockAgent:
     modules = [
         "livedocs.agent",
         "livedocs.bootstrap.taxonomy",
+        "livedocs.bootstrap.pass1_drafts",
+        "livedocs.bootstrap.pass2_stitch",
     ]
     for modname in modules:
         try:

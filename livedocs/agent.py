@@ -256,6 +256,9 @@ class ClaudeAgent:
         self.lang = lang
         self.model = model
 
+    DEFAULT_ALLOWED_TOOLS: tuple[str, ...] = ("Read", "Glob", "Grep", "Write")
+    DEFAULT_DISALLOWED_TOOLS: tuple[str, ...] = ("Edit", "Bash", "WebFetch")
+
     def call(
         self,
         user_prompt: str,
@@ -265,6 +268,7 @@ class ClaudeAgent:
         extra_system: str | None = None,
         json_schema: dict | None = None,
         on_progress: ProgressCallback | None = None,
+        allowed_tools: list[str] | None = None,
     ) -> AgentResult:
         """Run one Claude turn.
 
@@ -284,7 +288,8 @@ class ClaudeAgent:
             "--print",
             "--output-format=stream-json",
             "--verbose",
-            "--allowedTools", "Read,Glob,Grep,Write",
+            "--allowedTools", ",".join(allowed_tools or self.DEFAULT_ALLOWED_TOOLS),
+            "--disallowedTools", ",".join(self.DEFAULT_DISALLOWED_TOOLS),
             "--add-dir", str(self.repo_root),
         ]
 

@@ -15,6 +15,8 @@ from pathlib import Path
 from livedocs import ui
 from livedocs.agent import AgentError
 from livedocs.bootstrap.guidance import collect_guidance
+from livedocs.bootstrap.pass1_drafts import run_pass1
+from livedocs.bootstrap.pass2_stitch import run_pass2
 from livedocs.bootstrap.scanner import run_scan
 from livedocs.bootstrap.state import (
     BootstrapState,
@@ -105,6 +107,44 @@ def run_bootstrap(
         state.last_completed_phase = 3
         save_bootstrap_state(repo_root, state)
 
-    # --- Phases 4-7 (next commit) ------------------------------------------
-    ui.info(t("bootstrap_phases_4_7_todo"))
+    # --- Phase 4 --- Passada 1: rascunhos isolados -------------------------
+    if state.last_completed_phase < 4:
+        ui.section(t("bootstrap_phase_pass1"))
+        assert state.taxonomy is not None
+        total = len(state.taxonomy.capabilities) + len(state.taxonomy.journeys)
+        counter = {"n": 0}
+
+        def _on_draft_done(rec, _total=total, _counter=counter):
+            _counter["n"] += 1
+            ui.info(
+                f"[{_counter['n']}/{_total}] {rec.slug} → {rec.status} "
+                f"(US${rec.draft_cost_usd:.4f})"
+            )
+
+        run_pass1(repo_root, cfg, state, on_guide_done=_on_draft_done)
+        state.status = "stitching"
+        state.last_completed_phase = 4
+        save_bootstrap_state(repo_root, state)
+
+    # --- Phase 5 --- Passada 2: costura ------------------------------------
+    if state.last_completed_phase < 5:
+        ui.section(t("bootstrap_phase_pass2"))
+        drafted = [g for g in state.guides if g.status in ("drafted", "stitched", "refined")]
+        total = len(drafted)
+        counter = {"n": 0}
+
+        def _on_stitch_done(rec, _total=total, _counter=counter):
+            _counter["n"] += 1
+            ui.info(
+                f"[{_counter['n']}/{_total}] {rec.slug} → {rec.status} "
+                f"(US${rec.stitch_cost_usd:.4f})"
+            )
+
+        run_pass2(repo_root, cfg, state, on_guide_done=_on_stitch_done)
+        state.status = "refining"
+        state.last_completed_phase = 5
+        save_bootstrap_state(repo_root, state)
+
+    # --- Phases 6-7 (next commit) ------------------------------------------
+    ui.info(t("bootstrap_phases_6_7_todo"))
     return 0

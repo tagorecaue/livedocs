@@ -42,8 +42,11 @@ def test_bootstrap_phases_0_to_3_e2e(tmp_project, mock_agent, monkeypatch):
 
     state = load_bootstrap_state(repo_root)
     assert state is not None
-    assert state.status == "drafting"
-    assert state.last_completed_phase == 3
+    # With phases 4-5 wired into the orchestrator, the pipeline now also
+    # tries to draft+stitch — but without canned responses for those, every
+    # guide ends up `pending` and stitching no-ops. The taxonomy itself is
+    # still approved at phase 3, which is what this test asserts.
+    assert state.last_completed_phase >= 3
     assert state.taxonomy is not None
     assert state.taxonomy.approved_at is not None
     assert len(state.taxonomy.capabilities) >= 2
