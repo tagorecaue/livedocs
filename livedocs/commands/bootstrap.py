@@ -4,8 +4,15 @@ The actual phase logic lives in `livedocs.bootstrap.*`. This module just
 wires them together with phase guards + state persistence, so each phase
 can be re-run independently via `--resume` and `--re-tax`.
 
-Implemented now: phases 0–3 (guidance, scan, taxonomy, review).
-Phases 4–7 follow in the next commit and will hang off the same loop.
+All seven phases are implemented:
+  0. Guidance — collect free-form maintainer orientation.
+  1. Scan — deterministic code scan (graph, routes, i18n, models).
+  2. Taxonomy — propose capabilities/journeys via Claude.
+  3. Review — interactive (or auto-accept) approval of the taxonomy.
+  4. Pass 1 — isolated drafts (one Claude call per guide).
+  5. Pass 2 — cross-guide stitching (links, terminology, contradictions).
+  6. Refinement — AI dedup of pending questions + batch interview.
+  7. Global update — rewrite guides whose questions got answered.
 """
 
 from __future__ import annotations
@@ -14,9 +21,11 @@ from pathlib import Path
 
 from livedocs import ui
 from livedocs.agent import AgentError
+from livedocs.bootstrap.global_update import run_global_update
 from livedocs.bootstrap.guidance import collect_guidance
 from livedocs.bootstrap.pass1_drafts import run_pass1
 from livedocs.bootstrap.pass2_stitch import run_pass2
+from livedocs.bootstrap.refinement import run_refinement
 from livedocs.bootstrap.scanner import run_scan
 from livedocs.bootstrap.state import (
     BootstrapState,
@@ -35,6 +44,7 @@ def run_bootstrap(
     resume: bool = False,
     re_tax: bool = False,
     accept_taxonomy: bool = False,
+    skip_refinement: bool = False,
 ) -> int:
     """Drive the seven-phase bootstrap pipeline.
 
@@ -49,6 +59,9 @@ def run_bootstrap(
     state = load_bootstrap_state(repo_root) if resume else None
     if state is None:
         state = BootstrapState(status="scanning", last_completed_phase=-1)
+    elif state.last_completed_phase >= 7 and state.status == "done":
+        ui.success(t("bootstrap_already_done"))
+        return 0
 
     # --- Phase 0 --- Guidance ----------------------------------------------
     if state.last_completed_phase < 0:
@@ -92,7 +105,7 @@ def run_bootstrap(
     # --- Phase 3 --- Taxonomy review ---------------------------------------
     if state.last_completed_phase < 3:
         ui.section(t("bootstrap_phase_taxonomy_review"))
-        assert state.taxonomy is not None  # phase 2 wrote it
+        assert state.taxonomy is not None
         reviewed = review_taxonomy(
             state.taxonomy,
             repo_root,
@@ -145,6 +158,25 @@ def run_bootstrap(
         state.last_completed_phase = 5
         save_bootstrap_state(repo_root, state)
 
-    # --- Phases 6-7 (next commit) ------------------------------------------
-    ui.info(t("bootstrap_phases_6_7_todo"))
+    # --- Phase 6 --- Refinement (dedup + batch interview) ------------------
+    if state.last_completed_phase < 6:
+        ui.section(t("bootstrap_phase_refinement"))
+        if skip_refinement:
+            ui.warn(t("bootstrap_refinement_skipped"))
+        else:
+            run_refinement(repo_root, cfg, state)
+        state.status = "updating"
+        state.last_completed_phase = 6
+        save_bootstrap_state(repo_root, state)
+
+    # --- Phase 7 --- Global update -----------------------------------------
+    if state.last_completed_phase < 7:
+        ui.section(t("bootstrap_phase_global_update"))
+        run_global_update(repo_root, cfg, state)
+        state.status = "done"
+        state.last_completed_phase = 7
+        save_bootstrap_state(repo_root, state)
+
+    n_guides = len(state.guides)
+    ui.success(t("bootstrap_done", n=n_guides, cost=state.total_cost_usd))
     return 0

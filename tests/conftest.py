@@ -227,6 +227,8 @@ def mock_agent(monkeypatch: pytest.MonkeyPatch) -> MockAgent:
         "livedocs.bootstrap.taxonomy",
         "livedocs.bootstrap.pass1_drafts",
         "livedocs.bootstrap.pass2_stitch",
+        "livedocs.bootstrap.refinement",
+        "livedocs.bootstrap.global_update",
     ]
     for modname in modules:
         try:

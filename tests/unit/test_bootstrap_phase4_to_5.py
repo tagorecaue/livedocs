@@ -64,7 +64,9 @@ def test_bootstrap_phases_0_to_5_e2e(tmp_project, mock_agent, monkeypatch):
 
     state = load_bootstrap_state(repo_root)
     assert state is not None
-    assert state.last_completed_phase == 5
-    assert state.status == "refining"
+    # With no pending questions, phase 6 (dedup) is a no-op and phase 7
+    # (global update) has no affected guides → bootstrap finishes clean.
+    assert state.last_completed_phase == 7
+    assert state.status == "done"
     assert all(g.status == "stitched" for g in state.guides)
     assert len(state.guides) == 2

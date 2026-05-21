@@ -401,9 +401,25 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Fase 5/7 — Costurando guias (passada 2)",
         "en": "Phase 5/7 — Stitching guides (pass 2)",
     },
-    "bootstrap_phases_6_7_todo": {
-        "pt-BR": "Fases 6-7 ainda não implementadas. Rode novamente com [bold]livedocs bootstrap --resume[/bold] quando estiverem.",
-        "en": "Phases 6-7 not implemented yet. Run [bold]livedocs bootstrap --resume[/bold] again later.",
+    "bootstrap_phase_refinement": {
+        "pt-BR": "Fase 6/7 — Entrevista de refinamento",
+        "en": "Phase 6/7 — Refinement interview",
+    },
+    "bootstrap_phase_global_update": {
+        "pt-BR": "Fase 7/7 — Atualizando guias afetados",
+        "en": "Phase 7/7 — Updating affected guides",
+    },
+    "bootstrap_done": {
+        "pt-BR": "Bootstrap completo. {n} guia(s) em docs/. Custo total: US${cost:.2f}.",
+        "en": "Bootstrap complete. {n} guide(s) in docs/. Total cost: US${cost:.2f}.",
+    },
+    "bootstrap_already_done": {
+        "pt-BR": "Bootstrap já completo. Manutenção incremental ainda não implementada (Plano B).",
+        "en": "Bootstrap already complete. Incremental maintenance not implemented yet (Plan B).",
+    },
+    "bootstrap_refinement_skipped": {
+        "pt-BR": "Refinamento pulado por --skip-refinement. Rode [bold]livedocs refine[/bold] depois para responder as perguntas pendentes.",
+        "en": "Refinement skipped via --skip-refinement. Run [bold]livedocs refine[/bold] later to answer pending questions.",
     },
     "bootstrap_phases_4_7_todo": {
         "pt-BR": "Fases 4-7 ainda não implementadas. Rode novamente com [bold]livedocs bootstrap --resume[/bold] quando estiverem.",

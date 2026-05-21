@@ -1,10 +1,36 @@
-# LiveDocs — Skill Procedure (v0)
+# LiveDocs — Skill Procedure (v0.2 — bootstrap)
 
 This file is loaded as context for the embedded agent system prompt. It captures
 the *workflow conventions* that consumers of LiveDocs guides expect.
 
 It's a distillation of `living-docs-from-graph` (the upstream skill) with a key
 difference: **the LiveDocs CLI orchestrates the workflow**, not the agent.
+
+## Workflow at a glance
+
+A maintainer drives the whole help center from one command:
+
+```
+livedocs init                       # one-time project setup
+livedocs bootstrap                  # seven-phase pipeline, full system
+livedocs bootstrap --resume         # resume from the last completed phase
+livedocs bootstrap --skip-refinement  # skip phase 6 interview (resume later)
+livedocs refine                     # run phases 6+7 alone, after --skip-refinement
+```
+
+The bootstrap pipeline has seven phases (see `.spec/bootstrap/plano-bootstrap.md`):
+
+  0. Guidance — free-form orientation from the maintainer.
+  1. Scan — deterministic code scan (graph + routes + i18n + models).
+  2. Taxonomy — capabilities + journeys proposed by Claude.
+  3. Review — interactive (or `--accept-taxonomy`) approval.
+  4. Pass 1 — isolated drafts (one Claude call per guide).
+  5. Pass 2 — cross-guide stitching (links, terminology, contradictions).
+  6. Refinement — AI dedup of pending questions + batch interview.
+  7. Global update — rewrite the guides whose questions got answered.
+
+The agent never invents content: anything that can't be derived from code is
+turned into a *pending question* and answered in phase 6.
 
 ---
 

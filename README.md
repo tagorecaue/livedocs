@@ -34,12 +34,11 @@ Sem cloud obrigatório. Sem captura de código. Sem lock-in.
 ## v0 — o que existe hoje
 
 ```bash
-livedocs              # detecta onde você parou e oferece próximo passo
-livedocs init         # configura projeto pela primeira vez
-livedocs new <slug>   # começa um guia novo
-livedocs continue     # retoma entrevista em andamento
-livedocs status       # estado de todos os guias
-livedocs review       # revisa coerência, links, front-matter
+livedocs init                         # configura projeto pela primeira vez
+livedocs bootstrap                    # documenta o sistema inteiro a partir do código (7 fases)
+livedocs bootstrap --resume           # retoma de onde parou
+livedocs bootstrap --skip-refinement  # pula a entrevista de refinamento
+livedocs refine                       # roda só fases 6+7 (após --skip-refinement)
 ```
 
 Provider único no v0: **Claude Code CLI** (recomendado). Outros entram em v0.5.

@@ -9,6 +9,7 @@ import typer
 from livedocs import ui
 from livedocs.commands.bootstrap import run_bootstrap
 from livedocs.commands.init import run_init
+from livedocs.commands.refine import run_refine
 from livedocs.commands.root import run_root
 from livedocs.i18n import detect_system_locale, set_lang, t
 from livedocs.state import find_repo_root, load_config
@@ -81,6 +82,11 @@ def cmd_bootstrap(
         "--accept-taxonomy",
         help="Skip the interactive taxonomy review and approve as-is (useful for CI).",
     ),
+    skip_refinement: bool = typer.Option(
+        False,
+        "--skip-refinement",
+        help="Skip phase 6 (refinement interview). Pending questions stay open; run `livedocs refine` later.",
+    ),
 ) -> None:
     cwd = Path.cwd()
     repo_root = find_repo_root(cwd)
@@ -93,7 +99,23 @@ def cmd_bootstrap(
         resume=resume,
         re_tax=re_tax,
         accept_taxonomy=accept_taxonomy,
+        skip_refinement=skip_refinement,
     )
+    raise typer.Exit(code=rc)
+
+
+@app.command(
+    "refine",
+    help="Run only the refinement interview + global update (phases 6-7). Use after --skip-refinement.",
+)
+def cmd_refine() -> None:
+    cwd = Path.cwd()
+    repo_root = find_repo_root(cwd)
+    if repo_root is None:
+        ui.error(t("err_no_project"))
+        raise typer.Exit(code=1)
+    _bootstrap_lang(repo_root)
+    rc = run_refine(repo_root)
     raise typer.Exit(code=rc)
 
 

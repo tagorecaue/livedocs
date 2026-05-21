@@ -1,11 +1,12 @@
 """Pending-question queue helpers.
 
 Manages the `pending_questions` list inside `BootstrapState`. Each entry
-gets a stable `Q{n}` id (sequential, 1-based). Dedup across guides is
-intentionally NOT done here — that's commit 4 (Fase 6).
+gets a stable `Q{n}` id (sequential, 1-based).
 
-The bootstrap orchestrator and the two passada modules write to the queue
-through this thin layer so the id allocation stays centralized.
+Phase 4-5 only add questions. Phase 6 (refinement) is the place that:
+- merges equivalent questions via `merge_questions(...)` (AI dedup output),
+- propagates a maintainer answer from canonical to every merged sibling
+  via `propagate_answer(...)`.
 """
 
 from __future__ import annotations
@@ -35,7 +36,6 @@ def add_pending(
     provisional_answer: str = "",
     confidence: Literal["high", "low"] = "low",
 ) -> str:
-    """Append a new PendingQuestion, return its id."""
     qid = _next_id(state)
     state.pending_questions.append(
         PendingQuestion(
@@ -53,12 +53,6 @@ def add_pending(
 def link_question_to_guide(
     state: BootstrapState, qid: str, guide_slug: str
 ) -> bool:
-    """Hint that `qid` also concerns `guide_slug` (best-effort).
-
-    Today we only flip the primary guide_slug if it was empty; full
-    cross-guide merging happens in commit 4 via the dedup pass.
-    Returns True if the question was found.
-    """
     for q in state.pending_questions:
         if q.id == qid:
             if not q.guide_slug:
@@ -71,4 +65,74 @@ def find_open(state: BootstrapState) -> list[PendingQuestion]:
     return [q for q in state.pending_questions if q.status == "open"]
 
 
-__all__ = ["add_pending", "find_open", "link_question_to_guide"]
+def _find(state: BootstrapState, qid: str) -> PendingQuestion | None:
+    for q in state.pending_questions:
+        if q.id == qid:
+            return q
+    return None
+
+
+def merge_questions(
+    state: BootstrapState,
+    canonical_id: str,
+    merged_ids: list[str],
+    canonical_question: str | None = None,
+) -> list[PendingQuestion]:
+    """Group equivalent questions: keep `canonical_id` open, mark others as merged.
+
+    Returns the list of `PendingQuestion`s that were actually touched
+    (canonical first if updated, then each merged sibling). Unknown ids
+    are silently ignored.
+    """
+    touched: list[PendingQuestion] = []
+    canonical = _find(state, canonical_id)
+    if canonical is None:
+        return touched
+    if canonical_question and canonical_question.strip():
+        new_q = canonical_question.strip()
+        if new_q != canonical.question:
+            canonical.question = new_q
+            touched.append(canonical)
+    for mid in merged_ids:
+        if mid == canonical_id:
+            continue
+        q = _find(state, mid)
+        if q is None:
+            continue
+        q.status = "merged"
+        q.merged_into = canonical_id
+        touched.append(q)
+    return touched
+
+
+def propagate_answer(
+    state: BootstrapState, canonical_id: str, answer: str
+) -> list[PendingQuestion]:
+    """Mark canonical as answered and propagate the answer to merged siblings.
+
+    Returns the list of updated questions (canonical first).
+    """
+    touched: list[PendingQuestion] = []
+    canonical = _find(state, canonical_id)
+    if canonical is None:
+        return touched
+    canonical.answer = answer
+    canonical.status = "answered"
+    touched.append(canonical)
+    for q in state.pending_questions:
+        if q.id == canonical_id:
+            continue
+        if q.merged_into == canonical_id and q.status == "merged":
+            q.answer = answer
+            q.status = "answered"
+            touched.append(q)
+    return touched
+
+
+__all__ = [
+    "add_pending",
+    "find_open",
+    "link_question_to_guide",
+    "merge_questions",
+    "propagate_answer",
+]
