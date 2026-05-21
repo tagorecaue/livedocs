@@ -1,5 +1,12 @@
 # LiveDocs — Issues conhecidas e plano de melhoria
 
+> **Atualização 2026-05-21**: o roadmap mudou pra `livedocs bootstrap`
+> (ver `.spec/bootstrap/plano-bootstrap.md`). Issues #1, #2, #5, #7, #11
+> ficam **obsoletas** — substituídas pelo novo fluxo de bootstrap. Issues
+> #6 (permission-mode foot-gun), #9 (schema_version não validada) e #10
+> (verificação de arquivos escritos) **continuam aplicáveis** e devem ser
+> herdadas pelos módulos do novo comando.
+
 > Atualizado: 2026-05-09 após smoke test E2E em `/tmp/livedocs-smoke` + auditoria de código.
 > Autor: Tagôre + co-pilot AI. Status: **v0.1.0 funciona ponta-a-ponta**, mas tem dívidas claras antes do v0.5.
 

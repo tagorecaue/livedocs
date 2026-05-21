@@ -139,23 +139,9 @@ def run_init(cwd: Path) -> int:
         ui.warn(t("abort"))
         return 130
 
-    # 6.6. Auto-detect `guides_subdir` and scan existing guides
-    # (new in v0.2 D.5)
-    from livedocs.import_existing import (
-        detect_guides_subdir,
-        scan_existing_guides,
-    )
-    from livedocs.state import load_state, save_state
-
-    guides_subdir = detect_guides_subdir(cwd, docs_dir)
-    if guides_subdir:
-        ui.blank()
-        ui.info(
-            t(
-                "init_guides_subdir_detected",
-                subdir=guides_subdir,
-            )
-        )
+    # 6.6. `guides_subdir` is now decided by the bootstrap pipeline (it picks
+    # `<docs_dir>/guides/` by default). We leave it empty at init time.
+    guides_subdir = ""
 
     # 7. Persist
     cfg = ProjectConfig(
@@ -177,23 +163,9 @@ def run_init(cwd: Path) -> int:
     # Make sure docs_dir exists (we may want to write to it later)
     (cwd / docs_dir).mkdir(parents=True, exist_ok=True)
 
-    # 8. Import existing guides into state (idempotent)
-    state = load_state(cwd)
-    imported = scan_existing_guides(cwd, cfg, state)
-    if imported > 0:
-        save_state(cwd, state)
-        ui.blank()
-        ui.success(t("init_imported_guides", n=imported))
-
     ui.blank()
     ui.success(t("init_done", path=str(config_path(cwd).relative_to(cwd))))
     ui.hint(t("init_style_customize", path=".livedocs/style.md"))
-
-    # Flow continuation: instead of telling the user to run `livedocs`,
-    # open the menu right here. We import lazily to avoid a circular import
-    # (root.py imports run_init via run_init_entry).
-    from livedocs.commands.root import run_root
-    from livedocs.state import find_repo_root
-
-    repo_root = find_repo_root(cwd) or cwd
-    return run_root(repo_root)
+    ui.blank()
+    ui.info("Próximo passo: livedocs bootstrap")
+    return 0

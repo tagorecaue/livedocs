@@ -222,12 +222,6 @@ def mock_agent(monkeypatch: pytest.MonkeyPatch) -> MockAgent:
     # Patch every module that imported ClaudeAgent at top-level.
     modules = [
         "livedocs.agent",
-        "livedocs.commands.interview",
-        "livedocs.commands.refine",
-        "livedocs.evaluator",
-        "livedocs.iteration",
-        "livedocs.commands.inbox",
-        "livedocs.commands.reverse_link",
     ]
     for modname in modules:
         try:
