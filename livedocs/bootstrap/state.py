@@ -121,6 +121,22 @@ class PendingQuestion(BaseModel):
     answer: str = ""
 
 
+class ScreenshotTodo(BaseModel):
+    """A screenshot the agent flagged for human capture during pass1.
+
+    Inserted as `> [!TODO:screenshot]` admonition inside the article markdown
+    AND mirrored here for programmatic listing/management. Status flips to
+    `captured` once a human attaches the image (future `livedocs screenshots`
+    command), or `dropped` if the route is no longer relevant.
+    """
+
+    guide_slug: str           # the article that mentions this screen
+    guide_path: str           # the .md file path (product, not tech)
+    route: str
+    description: str
+    status: Literal["open", "captured", "dropped"] = "open"
+
+
 BootstrapStatus = Literal[
     "scanning",
     "deriving",
@@ -147,6 +163,7 @@ class BootstrapState(BaseModel):
     taxonomy: Taxonomy | None = None
     guides: list[GuideRecord] = Field(default_factory=list)
     pending_questions: list[PendingQuestion] = Field(default_factory=list)
+    screenshot_todos: list[ScreenshotTodo] = Field(default_factory=list)
     total_cost_usd: float = 0.0
 
 

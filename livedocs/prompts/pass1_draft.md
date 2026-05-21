@@ -40,12 +40,30 @@ Leia os arquivos que casam com os globs abaixo. Use a tool Read/Glob/Grep:
     - `{{ tech_path }}`    (guia técnico, mesmo idioma)
 - Front-matter obrigatório nos dois (slug, title, kind, status="drafted", generated_at).
 
+# Screenshots — TODOs estruturados
+Quando o artigo mencionar uma TELA ou ROTA concreta da aplicação (caminhos como `/projects/new`, `/settings/billing`, telas do app), insira IMEDIATAMENTE APÓS o parágrafo que menciona, em linha separada, um marcador no formato:
+
+> [!TODO:screenshot]
+> Rota: `/path/da/rota`
+> Descrição: <o que essa tela mostra ou em que estado capturá-la>
+
+Use a sintaxe de admonition do GitHub/Obsidian acima EXATAMENTE como mostrada (com o `>` no início de cada linha do bloco). Não confunda com `[TODO:link=...]` que serve pra linkar outros guias.
+
+Regras:
+- Insira o marcador APENAS no `.md` de produto. NÃO insira no `.tech.md`.
+- Uma rota por marcador. Se um parágrafo menciona 3 telas, crie 3 marcadores.
+- Se a "rota" é abstrata (ex.: "tela de relatórios") e você não tem caminho concreto no código, OMITA o marcador — não invente.
+- Liste TODOS os marcadores que você inserir no campo `screenshot_todos` do JSON de saída.
+
 # Output (JSON estrito — somente JSON, sem prosa antes/depois)
 ```json
 {
   "files_written": ["{{ product_path }}", "{{ tech_path }}"],
   "pending_questions": [
     {"question": "...", "provisional_answer": "...", "confidence": "low"}
+  ],
+  "screenshot_todos": [
+    {"route": "/projects/new", "description": "Tela inicial do wizard de criação"}
   ]
 }
 ```

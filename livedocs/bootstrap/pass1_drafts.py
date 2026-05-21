@@ -36,6 +36,7 @@ from livedocs.bootstrap.state import (
     Capability,
     GuideRecord,
     Journey,
+    ScreenshotTodo,
     save_bootstrap_state,
 )
 from livedocs.models import ProjectConfig
@@ -293,6 +294,24 @@ def run_pass1(
                 confidence=confidence,
             )
             rec.pending_question_ids.append(qid)
+
+        # Persist screenshot TODOs (mirror what the agent embedded in the .md).
+        shots = data.get("screenshot_todos") or []
+        for sh in shots:
+            if not isinstance(sh, dict):
+                continue
+            route = (sh.get("route") or "").strip()
+            desc = (sh.get("description") or "").strip()
+            if not route:
+                continue
+            state.screenshot_todos.append(
+                ScreenshotTodo(
+                    guide_slug=record_slug,
+                    guide_path=product_rel,
+                    route=route,
+                    description=desc,
+                )
+            )
 
         rec.status = "drafted"
         rec.draft_cost_usd += float(result.cost_usd or 0.0)

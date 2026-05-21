@@ -137,9 +137,42 @@ def test_pass1_resume_skips_drafted(tmp_project, mock_agent):
     n_calls_first = len(mock_agent.calls)
     assert n_calls_first == 2
 
+
+def test_pass1_screenshot_todos_captured(tmp_project, mock_agent):
+    repo, cfg = tmp_project
+    state = BootstrapState()
+    _seed_taxonomy(state)
+
+    cob_prod, cob_tech = _make_md_files(repo, "capacidades/cobranca", "introducao")
+    onb_prod, onb_tech = _make_md_files(repo, "jornadas", "onboarding")
+
+    mock_agent.set_response("cobranca/introducao", json_data={
+        "files_written": [cob_prod, cob_tech],
+        "pending_questions": [],
+        "screenshot_todos": [
+            {"route": "/billing", "description": "Lista de faturas"},
+            {"route": "/billing/new", "description": "Wizard de nova fatura"},
+        ],
+    })
+    mock_agent.set_response("onboarding", json_data={
+        "files_written": [onb_prod, onb_tech],
+        "pending_questions": [],
+        "screenshot_todos": [{"route": "", "description": "ignorada"}],  # vazio → ignorado
+    })
+
+    run_pass1(repo, cfg, state)
+
+    assert len(state.screenshot_todos) == 2
+    todo = state.screenshot_todos[0]
+    assert todo.guide_slug == "cobranca/introducao"
+    assert todo.guide_path == cob_prod
+    assert todo.route == "/billing"
+    assert todo.status == "open"
+    assert state.screenshot_todos[1].route == "/billing/new"
+
     # Second run: agent should NOT be called for the already-drafted ones.
     run_pass1(repo, cfg, state)
-    assert len(mock_agent.calls) == n_calls_first  # no new calls
+    assert len(mock_agent.calls) == 2  # no new calls
 
 
 def test_pass1_multi_article_capability(tmp_project, mock_agent):
