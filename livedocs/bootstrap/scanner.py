@@ -101,27 +101,71 @@ def _detect_commit_sha(repo_root: Path) -> str | None:
 
 # ---------------------------------------------------------------------------
 # 2. graphify
+#
+# graphify creates the initial graph via an LLM-driven SKILL (e.g. the
+# `/graphify` slash command in Claude Code), NOT via the CLI. The CLI's
+# `update <path>` only refreshes an existing graph.
+#
+# So the contract here is: livedocs is a CONSUMER of a graph the user
+# already produced. We look for `<repo>/graphify-out/graph.json` (the
+# default location). If found, we copy/reference it into our cache. If
+# not found, we warn and continue without graph signal — other scan
+# sources (routes, i18n, models) still drive the taxonomy.
 # ---------------------------------------------------------------------------
 
+def _locate_graphify_output(repo_root: Path) -> Path | None:
+    """Find an existing graphify-out/graph.json in the repo."""
+    candidate = repo_root / "graphify-out" / "graph.json"
+    if candidate.is_file():
+        return candidate
+    return None
+
+
 def _run_graphify(repo_root: Path, out_path: Path) -> Path | None:
-    if shutil.which("graphify") is None:
-        ui.warn(t("bootstrap_graphify_missing"))
+    """Locate a graphify graph and (optionally) refresh it via `graphify update`.
+
+    Strategy:
+      1. If `<repo>/graphify-out/graph.json` exists, optionally refresh it via
+         `graphify update <repo>` (best-effort, --force to overwrite shrinking
+         graphs) and return that path.
+      2. If it doesn't exist, emit a hint telling the user how to bootstrap
+         the graph (via the `/graphify` skill in Claude Code) and return None.
+      3. We never invent or call a non-existent `graphify scan` subcommand.
+    """
+    existing = _locate_graphify_output(repo_root)
+    if existing is None:
+        if shutil.which("graphify") is None:
+            ui.warn(t("bootstrap_graphify_missing"))
+        else:
+            ui.warn(
+                "Nenhum grafo do graphify encontrado em graphify-out/graph.json. "
+                "Rode `/graphify` em Claude Code (ou equivalente) dentro deste repo "
+                "uma vez para gerar o grafo inicial; livedocs vai consumi-lo na "
+                "próxima execução. Seguindo sem sinal de grafo."
+            )
         return None
+
+    # Try a best-effort refresh — non-fatal if it fails.
+    if shutil.which("graphify") is not None:
+        try:
+            subprocess.run(  # noqa: S603,S607 — trusted
+                ["graphify", "update", str(repo_root), "--force"],
+                capture_output=True,
+                text=True,
+                timeout=300,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as e:
+            ui.warn(f"graphify update failed (kept existing graph): {e}")
+
+    # Mirror into our cache dir so callers always read from a stable path.
     try:
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        result = subprocess.run(  # noqa: S603,S607 — trusted
-            ["graphify", "scan", "--out", str(out_path), str(repo_root)],
-            capture_output=True,
-            text=True,
-            timeout=300,
-            check=False,
-        )
-        if result.returncode == 0 and out_path.exists():
-            return out_path
-        ui.warn(f"graphify failed (exit {result.returncode}): {result.stderr.strip()[:200]}")
-    except (OSError, subprocess.TimeoutExpired) as e:
-        ui.warn(f"graphify error: {e}")
-    return None
+        out_path.write_bytes(existing.read_bytes())
+        return out_path
+    except OSError as e:
+        ui.warn(f"could not cache graphify output ({e}); using source path")
+        return existing
 
 
 # ---------------------------------------------------------------------------
