@@ -225,6 +225,7 @@ def mock_agent(monkeypatch: pytest.MonkeyPatch) -> MockAgent:
     modules = [
         "livedocs.agent",
         "livedocs.bootstrap.taxonomy",
+        "livedocs.bootstrap.taxonomy_review",
         "livedocs.bootstrap.pass1_drafts",
         "livedocs.bootstrap.pass2_stitch",
         "livedocs.bootstrap.refinement",

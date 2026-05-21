@@ -66,23 +66,34 @@ _TAXONOMY = {
 }
 
 
-def _md(repo: Path, kind_dir: str, slug: str, title: str) -> tuple[str, str]:
-    """Materialize the product + tech files. Returns their repo-relative paths."""
-    base = repo / "docs" / kind_dir
+def _md(repo: Path, kind_dir: str, slug: str, title: str, *, article_slug: str = "introducao") -> tuple[str, str]:
+    """Materialize the product + tech files. Returns their repo-relative paths.
+
+    Schema v2 layout: capabilities live at docs/capacidades/<cap>/<article>.md,
+    journeys stay flat at docs/jornadas/<slug>.md.
+    """
+    if kind_dir == "capacidades":
+        base = repo / "docs" / kind_dir / slug
+        rel_dir = f"docs/{kind_dir}/{slug}"
+        fname = article_slug
+    else:
+        base = repo / "docs" / kind_dir
+        rel_dir = f"docs/{kind_dir}"
+        fname = slug
     base.mkdir(parents=True, exist_ok=True)
-    prod = base / f"{slug}.md"
-    tech = base / f"{slug}.tech.md"
+    prod = base / f"{fname}.md"
+    tech = base / f"{fname}.tech.md"
     prod.write_text(
-        f"---\nslug: {slug}\ntitle: {title}\nstatus: drafted\n---\n\n"
+        f"---\nslug: {fname}\ntitle: {title}\nstatus: drafted\n---\n\n"
         f"# {title}\n\nDescrição inicial gerada pelo agente.\n",
         encoding="utf-8",
     )
     tech.write_text(
-        f"---\nslug: {slug}\ntitle: {title} (técnico)\nstatus: drafted\n---\n\n"
+        f"---\nslug: {fname}\ntitle: {title} (técnico)\nstatus: drafted\n---\n\n"
         f"# {title} (técnico)\n\nDetalhes técnicos.\n",
         encoding="utf-8",
     )
-    return f"docs/{kind_dir}/{slug}.md", f"docs/{kind_dir}/{slug}.tech.md"
+    return f"{rel_dir}/{fname}.md", f"{rel_dir}/{fname}.tech.md"
 
 
 def _copy_fixture(target: Path) -> None:
@@ -142,6 +153,8 @@ def test_bootstrap_e2e_mini_saas(mini_saas_repo, mock_agent, monkeypatch):
     # We still want the refinement interview to RUN, so flip non-interactive
     # off but stub `ui.ask_text` to feed canned answers.
     monkeypatch.setattr("livedocs.ui.is_non_interactive", lambda: False)
+    # Disable real graphify CLI invocation in scan phase.
+    monkeypatch.setattr("livedocs.bootstrap.scanner.shutil.which", lambda _cmd: None)
 
     answers = iter(
         [
@@ -269,9 +282,11 @@ def test_bootstrap_e2e_mini_saas(mini_saas_repo, mock_agent, monkeypatch):
     assert len(state.taxonomy.journeys) == 1
     assert len(state.guides) == 3
 
-    # Every guide answered → refined.
+    # Every guide answered → refined. With schema v2, capability guides
+    # are slugged as `<cap-slug>/<article-slug>`; default migration creates
+    # an "introducao" article per capability.
     statuses = {g.slug: g.status for g in state.guides}
-    for slug in ("cobranca", "configuracoes", "primeira-fatura"):
+    for slug in ("cobranca/introducao", "configuracoes/introducao", "primeira-fatura"):
         assert statuses[slug] == "refined", statuses
 
     # Pending questions exist + at least 3 are answered.

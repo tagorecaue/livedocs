@@ -32,6 +32,8 @@ def test_bootstrap_phases_0_to_3_e2e(tmp_project, mock_agent, monkeypatch):
     monkeypatch.setattr(
         "livedocs.ui.is_non_interactive", lambda: True,
     )
+    # Disable real graphify CLI invocation — scanner falls back to no graph signal.
+    monkeypatch.setattr("livedocs.bootstrap.scanner.shutil.which", lambda _cmd: None)
     mock_agent.set_response("propor-taxonomia", _CANNED_TAXONOMY)
 
     rc = run_bootstrap(repo_root, accept_taxonomy=True)
@@ -60,6 +62,7 @@ def test_bootstrap_resume_skips_completed_phases(tmp_project, mock_agent, monkey
     import io
     monkeypatch.setattr("sys.stdin", io.StringIO("first run\n"))
     monkeypatch.setattr("livedocs.ui.is_non_interactive", lambda: True)
+    monkeypatch.setattr("livedocs.bootstrap.scanner.shutil.which", lambda _cmd: None)
     mock_agent.set_response("propor-taxonomia", _CANNED_TAXONOMY)
 
     rc1 = run_bootstrap(repo_root, accept_taxonomy=True)

@@ -51,6 +51,7 @@ def _kind_dir(kind: str) -> str:
 
 def _paths_for(repo_root: Path, docs_dir: str, kind: str, slug: str) -> tuple[Path, Path, str, str]:
     sub = _kind_dir(kind)
+    # Article slugs are composite "<cap>/<article>" → already a relative path.
     product_rel = f"{docs_dir}/{sub}/{slug}.md"
     tech_rel = f"{docs_dir}/{sub}/{slug}.tech.md"
     return (
@@ -93,8 +94,20 @@ def _summarize_for_index(content: str) -> tuple[str, str, str]:
 def _build_index_others(
     repo_root: Path, docs_dir: str, state: BootstrapState, current_slug: str
 ) -> list[dict]:
-    out: list[dict] = []
+    """Build a 2-level index: capability → its articles + flat journeys.
+
+    Articles têm slug composto `<cap-slug>/<article-slug>`. O índice é
+    agrupado para o agente entender a hierarquia ao resolver links:
+
+        - Cobrança recorrente (cobranca-recorrente)
+          - introducao
+          - emissao-boletos
+        - Jornada: Captação ao contrato (captacao-contrato)
+    """
     drafted_or_better = {"drafted", "stitched", "refined"}
+
+    # Map slug → (record, summary tuple) for drafted guides only.
+    available: dict[str, tuple[GuideRecord, str, str, str]] = {}
     for g in state.guides:
         if g.slug == current_slug:
             continue
@@ -108,12 +121,64 @@ def _build_index_others(
         except OSError:
             continue
         title, summary, first_para = _summarize_for_index(content)
+        available[g.slug] = (g, title or g.slug, summary or "", first_para or "")
+
+    out: list[dict] = []
+    seen: set[str] = set()
+
+    if state.taxonomy is not None:
+        for cap in state.taxonomy.capabilities:
+            articles_entries: list[dict] = []
+            for art in cap.articles:
+                composite = f"{cap.slug}/{art.slug}"
+                if composite not in available:
+                    continue
+                _g, title, summary, first_para = available[composite]
+                articles_entries.append({
+                    "slug": composite,
+                    "article_slug": art.slug,
+                    "title": title,
+                    "summary": summary,
+                    "first_paragraph": first_para,
+                    "is_intro": art.is_intro,
+                })
+                seen.add(composite)
+            if articles_entries:
+                out.append({
+                    "kind": "capability",
+                    "slug": cap.slug,
+                    "title": cap.title,
+                    "summary": cap.summary or "",
+                    "articles": articles_entries,
+                })
+
+        for jrn in state.taxonomy.journeys:
+            if jrn.slug not in available:
+                continue
+            _g, title, summary, first_para = available[jrn.slug]
+            out.append({
+                "kind": "journey",
+                "slug": jrn.slug,
+                "title": title,
+                "summary": summary,
+                "first_paragraph": first_para,
+                "articles": [],
+            })
+            seen.add(jrn.slug)
+
+    # Stragglers (guides not in current taxonomy — safety net).
+    for slug, (g, title, summary, first_para) in available.items():
+        if slug in seen:
+            continue
         out.append({
-            "slug": g.slug,
-            "title": title or g.slug,
-            "summary": summary or "",
-            "first_paragraph": first_para or "",
+            "kind": g.kind,
+            "slug": slug,
+            "title": title,
+            "summary": summary,
+            "first_paragraph": first_para,
+            "articles": [],
         })
+
     return out
 
 

@@ -13,19 +13,20 @@ Costure este guia ao restante do help center.
 {{ tech_content }}
 ```
 
-# Índice dos demais guias
-{% for o in index_others %}
-## `{{ o.slug }}` — {{ o.title }}
-- summary: {{ o.summary }}
-- primeiro parágrafo: {{ o.first_paragraph }}
-{% endfor %}
+# Índice dos demais guias (2 níveis: capacidade → artigos)
+{% for o in index_others %}{% if o.kind == 'capability' %}
+- **{{ o.title }}** (`{{ o.slug }}`){% if o.summary %} — {{ o.summary }}{% endif %}
+{% for a in o.articles %}    - `{{ a.slug }}` — {{ a.title }}{% if a.is_intro %}  (intro){% endif %}{% if a.summary %} — {{ a.summary }}{% endif %}
+{% endfor %}{% else %}
+- Jornada: **{{ o.title }}** (`{{ o.slug }}`){% if o.summary %} — {{ o.summary }}{% endif %}
+{% endif %}{% endfor %}
 
 # Placeholders [TODO:link=...] detectados
 {% if todos %}{% for s in todos %}- `{{ s }}`
 {% endfor %}{% else %}(nenhum){% endif %}
 
 # O que fazer
-1. Para cada `[TODO:link={slug}]`, substitua pelo link Markdown real se o slug existe no índice. Se não existe, registre como pergunta pendente em `new_pending_questions` ("Quis linkar {slug} mas não achei guia correspondente") e mantenha no array `todos_unresolved`.
+1. Para cada `[TODO:link={slug}]`, substitua pelo link Markdown real se o slug existe no índice. Aceite ambas as formas: slug composto `<cap>/<article>` (preferido para articles) ou só `<article-slug>` quando for único em todo o help. Se não existe, registre como pergunta pendente em `new_pending_questions` ("Quis linkar {slug} mas não achei guia correspondente") e mantenha no array `todos_unresolved`.
 2. Onde o texto menciona algo que CLARAMENTE corresponde a outro guia (mesmo sem TODO), proponha link inline.
 3. Harmonize terminologia: se este guia usa um termo divergente do dominante no menu, ajuste.
 4. Sinalize contradições: se este guia afirma X mas outro guia afirma not-X, anote em `contradictions`.

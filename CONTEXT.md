@@ -30,6 +30,28 @@ LiveDocs documenta um SaaS em três tipos de **guia**, em ordem de prioridade:
 > específico daquela tela não cabe na capacidade que ela serve
 > (raro). Default: tela = seção dentro da capacidade.
 
+## Artigo
+
+Unidade de página/artigo do help center. Pertence a uma e apenas
+uma capacidade (ou é, no caso de jornadas, o documento da jornada
+em si). Cada capacidade tem **pelo menos um** artigo após
+aprovação da taxonomia.
+
+- Slug em kebab-case, único dentro da capacidade pai.
+- `is_intro=True` marca o artigo como overview da categoria — ele
+  resume o domínio inteiro e linka os irmãos. O agente decide se
+  cria com base na complexidade; capacidades simples não precisam.
+- Cada artigo tem face de produto (`<slug>.md`) e face técnica
+  (`<slug>.tech.md`), conforme o pareamento abaixo.
+
+Mapeamento ao Chatwoot (Plano B):
+
+  Categoria Chatwoot   ←   Capacidade
+  Artigo Chatwoot      ←   Artigo
+
+Hierarquia profunda (artigo dentro de artigo) NÃO existe.
+Chatwoot não suporta, e o modelo permanece 2 níveis fixos.
+
 ## Pareamento produto/técnico
 
 Cada guia (capacidade ou jornada) tem duas faces, geradas e

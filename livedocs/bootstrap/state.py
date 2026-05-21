@@ -9,8 +9,10 @@ State file lives at `<repo>/.livedocs/bootstrap.toml` (gitignored). Holds:
   - per-guide records (status, costs, pending question ids)
   - the pending-questions queue
 
-Schema is locked at v1. If a future schema_version comes in we refuse to
-load — caller must run a migration. (Issue #9 carried over from v0.1.)
+Schema v2 added the `Article` model: a Capability is now a *container*
+(equivalente a Categoria do Chatwoot) e cada `Article` é a unidade de
+página/artigo. Capacidade tem ≥ 1 artigo. Bumps de schema futuros
+seguem o mesmo padrão de migração silenciosa abaixo.
 
 A `.bak` copy of the previous state is written before each save so a
 crash during write doesn't leave the file truncated.
@@ -21,7 +23,7 @@ from __future__ import annotations
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import tomli_w
 from pydantic import BaseModel, Field
@@ -32,7 +34,7 @@ except ImportError:  # pragma: no cover
     import tomli as tomllib  # type: ignore[no-redef]
 
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 BOOTSTRAP_FILE_NAME = "bootstrap.toml"
 LIVEDOCS_DIR_NAME = ".livedocs"
 
@@ -59,11 +61,31 @@ class Scan(BaseModel):
     commit_sha: str | None = None  # Plan B uses this as the capture point.
 
 
+class Article(BaseModel):
+    """Uma unidade de página/artigo dentro de uma capacidade.
+
+    Mapeia naturalmente em Artigo do Chatwoot. Capacidade vira a
+    categoria-contêiner; cada artigo é uma página independente. Slugs
+    são únicos *dentro* da capacidade (kebab-case).
+
+    `is_intro=True` marca o artigo introdutório/overview da categoria:
+    resume o domínio inteiro e linka os irmãos. No máximo um intro por
+    capacidade.
+    """
+
+    slug: str
+    title: str
+    summary: str = ""
+    is_intro: bool = False
+    code_anchors: list[str] = Field(default_factory=list)
+
+
 class Capability(BaseModel):
     slug: str
     title: str
     summary: str = ""
     code_anchors: list[str] = Field(default_factory=list)
+    articles: list[Article] = Field(default_factory=list)
 
 
 class Journey(BaseModel):
@@ -137,6 +159,39 @@ def bootstrap_path(repo_root: Path) -> Path:
 
 
 # ---------------------------------------------------------------------------
+# Migrations
+# ---------------------------------------------------------------------------
+
+def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
+    """Add a default introdutory Article to every capability.
+
+    Antes do v2 a Capability era diretamente a unidade de página. Agora
+    o artigo é a unidade. Toda capability existente sem articles ganha
+    um `introducao` com `is_intro=True` derivado do título/summary/anchors
+    da própria capability — equivalência funcional 1-pra-1 com o
+    comportamento velho.
+    """
+    tax = data.get("taxonomy")
+    if isinstance(tax, dict):
+        caps = tax.get("capabilities") or []
+        for cap in caps:
+            if not isinstance(cap, dict):
+                continue
+            if not cap.get("articles"):
+                cap["articles"] = [
+                    {
+                        "slug": "introducao",
+                        "title": cap.get("title", cap.get("slug", "")),
+                        "summary": cap.get("summary", ""),
+                        "is_intro": True,
+                        "code_anchors": list(cap.get("code_anchors", []) or []),
+                    }
+                ]
+    data["schema_version"] = 2
+    return data
+
+
+# ---------------------------------------------------------------------------
 # IO
 # ---------------------------------------------------------------------------
 
@@ -145,6 +200,9 @@ def load_bootstrap_state(repo_root: Path) -> BootstrapState | None:
 
     Raises ValueError with a clear message if the file on disk has a
     schema_version newer than what this build understands.
+
+    v1 → v2 é migrado silenciosamente em memória; só persiste no próximo
+    save_bootstrap_state.
     """
     p = bootstrap_path(repo_root)
     if not p.exists():
@@ -158,6 +216,8 @@ def load_bootstrap_state(repo_root: Path) -> BootstrapState | None:
             f"livedocs build only understands up to v{CURRENT_SCHEMA_VERSION}. "
             "Upgrade livedocs or use an older bootstrap file."
         )
+    if schema_version < 2:
+        data = _migrate_v1_to_v2(data)
     return BootstrapState.model_validate(data)
 
 

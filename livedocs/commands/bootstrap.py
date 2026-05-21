@@ -149,6 +149,8 @@ def run_bootstrap(
             repo_root,
             non_interactive=ui.is_non_interactive(),
             auto_accept=accept_taxonomy,
+            guidance_text=(state.guidance.text or ""),
+            lang=cfg.lang,
         )
         if reviewed is None:
             ui.warn(t("bootstrap_review_aborted"))
