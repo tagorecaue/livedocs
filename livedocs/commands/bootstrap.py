@@ -22,7 +22,7 @@ from pathlib import Path
 from livedocs import ui
 from livedocs.agent import AgentError
 from livedocs.bootstrap.global_update import run_global_update
-from livedocs.bootstrap.guidance import collect_guidance
+from livedocs.bootstrap.guidance import clear_draft, collect_guidance
 from livedocs.bootstrap.pass1_drafts import run_pass1
 from livedocs.bootstrap.pass2_stitch import run_pass2
 from livedocs.bootstrap.refinement import run_refinement
@@ -66,11 +66,14 @@ def run_bootstrap(
     # --- Phase 0 --- Guidance ----------------------------------------------
     if state.last_completed_phase < 0:
         ui.section(t("bootstrap_phase_guidance"))
-        guidance = collect_guidance(non_interactive=ui.is_non_interactive())
+        guidance = collect_guidance(
+            non_interactive=ui.is_non_interactive(), repo_root=repo_root
+        )
         state.guidance = guidance
         state.status = "scanning"
         state.last_completed_phase = 0
         save_bootstrap_state(repo_root, state)
+        clear_draft(repo_root)
 
     # --- Phase 1 --- Scan --------------------------------------------------
     if state.last_completed_phase < 1:
