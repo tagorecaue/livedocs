@@ -324,6 +324,83 @@ STRINGS: dict[str, dict[Lang, str]] = {
         "pt-BR": "Slug [bold]{slug}[/bold] não encontrado.",
         "en": "Slug [bold]{slug}[/bold] not found.",
     },
+    # ---- bootstrap pipeline (phases 0-7) ----
+    "bootstrap_guidance_intro": {
+        "pt-BR": "LiveDocs vai documentar seu sistema. Antes de começar, conta um pouco sobre o contexto:",
+        "en": "LiveDocs will document your system. Before we start, tell us a bit about the context:",
+    },
+    "bootstrap_guidance_prompt": {
+        "pt-BR": (
+            "Me conta aqui quem você é, o que o sistema faz, para que serve.\n"
+            "Você pode colar referências, instruções gerais ou qualquer coisa que ajude a IA durante o processo de documentação.\n"
+            "(Vazio é ok — pressione Enter sem digitar.)"
+        ),
+        "en": (
+            "Tell us who you are, what the system does, and what it's for.\n"
+            "You can paste references, general instructions, or anything that helps the AI while it documents.\n"
+            "(Empty is fine — just press Enter.)"
+        ),
+    },
+    "bootstrap_guidance_too_long": {
+        "pt-BR": "Orientação muito longa ({n} caracteres). Aceita, mas pode encher contexto.",
+        "en": "Guidance is very long ({n} chars). Accepted, but may bloat context.",
+    },
+    "bootstrap_phase_guidance": {
+        "pt-BR": "Fase 0/7 — Orientação",
+        "en": "Phase 0/7 — Guidance",
+    },
+    "bootstrap_phase_scan": {
+        "pt-BR": "Fase 1/7 — Varredura do código",
+        "en": "Phase 1/7 — Code scan",
+    },
+    "bootstrap_phase_taxonomy": {
+        "pt-BR": "Fase 2/7 — Taxonomia proposta",
+        "en": "Phase 2/7 — Proposed taxonomy",
+    },
+    "bootstrap_phase_taxonomy_review": {
+        "pt-BR": "Fase 3/7 — Revisão da taxonomia",
+        "en": "Phase 3/7 — Taxonomy review",
+    },
+    "bootstrap_graphify_missing": {
+        "pt-BR": "graphify não encontrado no PATH — sigo sem o grafo. (Instale com `pip install graphify` se quiser.)",
+        "en": "graphify not found on PATH — continuing without graph. (Install via `pip install graphify` if you want it.)",
+    },
+    "bootstrap_scan_done": {
+        "pt-BR": "Scan: {routes} rota(s), {i18n} chave(s) i18n, {models} modelo(s).",
+        "en": "Scan: {routes} route(s), {i18n} i18n key(s), {models} model(s).",
+    },
+    "bootstrap_taxonomy_deriving": {
+        "pt-BR": "Derivando capacidades e jornadas a partir do scan…",
+        "en": "Deriving capabilities and journeys from the scan…",
+    },
+    "bootstrap_taxonomy_bad_json": {
+        "pt-BR": "O agente não devolveu JSON de taxonomia válido.",
+        "en": "Agent did not return valid taxonomy JSON.",
+    },
+    "bootstrap_review_actions": {
+        "pt-BR": "O que você quer fazer com a taxonomia?",
+        "en": "What do you want to do with the taxonomy?",
+    },
+    "bootstrap_review_aborted": {
+        "pt-BR": "Revisão abortada pelo usuário.",
+        "en": "Review aborted by user.",
+    },
+    "bootstrap_review_approved": {
+        "pt-BR": "Taxonomia aprovada com {caps} capacidade(s) e {jrn} jornada(s).",
+        "en": "Taxonomy approved with {caps} capability/ies and {jrn} journey(s).",
+    },
+    "bootstrap_review_preview_written": {
+        "pt-BR": "Preview salvo em [bold]{path}[/bold]",
+        "en": "Preview written to [bold]{path}[/bold]",
+    },
+    "bootstrap_phases_4_7_todo": {
+        "pt-BR": "Fases 4-7 ainda não implementadas. Rode novamente com [bold]livedocs bootstrap --resume[/bold] quando estiverem.",
+        "en": "Phases 4-7 not implemented yet. Run [bold]livedocs bootstrap --resume[/bold] again later.",
+    },
+    "bootstrap_need_init": {
+        "pt-BR": "Nenhum projeto LiveDocs aqui. Rode [bold]livedocs init[/bold] antes do bootstrap.",
+        "en": "No LiveDocs project here. Run [bold]livedocs init[/bold] before bootstrapping.",
+    },
     # ---- v0.2 — Adaptive interview (fact-driven) — only the NEW keys.
     # Keys reused from v0.1 (intent_q, interview_*) are NOT redefined.
     "intent_hint": {

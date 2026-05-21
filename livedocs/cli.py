@@ -76,6 +76,11 @@ def cmd_bootstrap(
     re_tax: bool = typer.Option(
         False, "--re-tax", help="Re-run the taxonomy phase while keeping the scan cache."
     ),
+    accept_taxonomy: bool = typer.Option(
+        False,
+        "--accept-taxonomy",
+        help="Skip the interactive taxonomy review and approve as-is (useful for CI).",
+    ),
 ) -> None:
     cwd = Path.cwd()
     repo_root = find_repo_root(cwd)
@@ -83,7 +88,12 @@ def cmd_bootstrap(
         ui.error(t("err_no_project"))
         raise typer.Exit(code=1)
     _bootstrap_lang(repo_root)
-    rc = run_bootstrap(repo_root, resume=resume, re_tax=re_tax)
+    rc = run_bootstrap(
+        repo_root,
+        resume=resume,
+        re_tax=re_tax,
+        accept_taxonomy=accept_taxonomy,
+    )
     raise typer.Exit(code=rc)
 
 
