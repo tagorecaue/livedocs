@@ -222,7 +222,7 @@ Tools you can use to generate it:
 - **ComfyUI / SDXL** locally with a flat-design LoRA if you have one.
 - **An illustrator** (the prompt above translates well to a brief).
 
-Save the result at `assets/banner.png` (1280×640 for the social card
+Save the result at `assets/banner.jpg` (1280×640 for the social card
 slot; GitHub repo settings → Social preview → Upload). Don't commit
 larger than 1 MB; use a PNG with reasonable compression or convert to
 WebP if the tool supports it.
