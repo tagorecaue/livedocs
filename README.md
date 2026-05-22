@@ -1,10 +1,8 @@
-<p align="center">
-  <img src="assets/banner.png" alt="LiveDocs banner" width="100%">
-</p>
-
 <div align="center">
 
 # LiveDocs
+
+<img src="assets/banner.png" alt="LiveDocs banner" width="600">
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Status](https://img.shields.io/badge/status-alpha-orange.svg)]()
