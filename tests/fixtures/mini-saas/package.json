@@ -1,9 +1,0 @@
-{
-  "name": "mini-saas",
-  "version": "0.1.0",
-  "dependencies": {
-    "vue": "^3.4.0",
-    "vue-i18n": "^9.9.0",
-    "typeorm": "^0.3.20"
-  }
-}

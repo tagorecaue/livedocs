@@ -1,9 +1,0 @@
-{
-  "capabilities": [
-    {"slug": "cobranca", "title": "Cobrança", "summary": "Faturas e pagamentos.", "code_anchors": ["src/models/Invoice.ts", "src/pages/Billing.vue"]},
-    {"slug": "configuracoes", "title": "Configurações", "summary": "Ajustes da conta.", "code_anchors": ["src/pages/Settings.vue", "src/models/User.ts"]}
-  ],
-  "journeys": [
-    {"slug": "primeira-fatura", "title": "Primeira fatura", "summary": "Do cadastro até a primeira fatura.", "capability_refs": ["cobranca", "configuracoes"]}
-  ]
-}
