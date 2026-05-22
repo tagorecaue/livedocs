@@ -164,6 +164,168 @@ Falsos positivos quebram a confiança na pipeline.
 > If verification fails, set the article's `files_modified` to [] and report
 > the failure in `errors` array — never report success without verification.
 
+### 2.5b [BLOCKER] Qualidade das pending questions — heurísticas de "o que NÃO perguntar"
+
+**Sintoma observado:** comparando as perguntas que esta skill gerou (314)
+com perguntas de uma versão artesanal anterior do livedocs (vide
+`packages/docs/guides/*/_meta/*.interview.md` no monorepo <Client>),
+ficou claro que a skill atual:
+
+1. Gera muita pergunta que o agente poderia ter respondido lendo até 2 arquivos
+   do código (labels de enum visíveis na UI, valores válidos de enums estruturais,
+   schedules de cron com nome óbvio, existência de ADRs com path conhecido).
+2. Gera perguntas mecânicas sobre estrutura de schema ("X não herda structure.audited
+   — intencional?") que são dívida técnica anotável, não pergunta de usuário.
+3. Trata cada pergunta como isolada, sem agrupamento temático.
+
+**Exemplos reais que NÃO deveriam ter chegado ao usuário:**
+- Q1: "Qual o label do enum invoiceStatusLabel?" — resolvido em 3min lendo BillingDashboard.vue
+- Q23: "Quais valores válidos para o enum structure.inbox_conversation_status?" — migration SQL responde
+- Q49: "Como visit_result.fields (jsonb) é editado em produção?" — componente revela
+- Q58: "ADR-0009 referenciado em código mas arquivo não existe?" — grep responde antes
+
+**Correção:** atualizar `references/pending-questions.md` com tabela explícita:
+
+#### 🚫 NÃO REGISTRAR como pending question:
+- Labels de enum visíveis na UI → procurar no `<template>`, arrays `:items=`,
+  `t()`/`$t()`, computeds `XxxLabel`, formatters
+- Valores possíveis de enums estruturais → existe migration SQL; faça grep
+- Comportamento documentado em código com nome óbvio (controller, service, hook)
+- Schemas/colunas sem auditoria — anotar como dívida técnica no `.tech.md`,
+  não levar ao usuário
+- Cron schedules e job names — código revela; só anotar
+- Existência de ADRs com path conhecido — `grep` ANTES de perguntar
+- "Tabela X tem coluna Y nullable, intencional?" — anotar como pendência
+  no tech.md, não perguntar
+- "Constante Z existe?" — `grep` resolve
+
+#### ✅ REGISTRAR como pending question:
+- **Integrações externas:** webhooks, sequência de chamadas, comportamento
+  sob falha do parceiro (ex: Asaas timeout, ZapSign signature_status)
+- **Regras de negócio ambíguas:** quando dois caminhos parecem equivalentes
+  mas levam a estados diferentes (ex: `auto_canceled` vs `terminated`)
+- **Intenção de produto:** *por que* foi feito assim, *quem* configura,
+  *quando* é usado
+- **Fluxos cruzados:** "quando X muda, o que acontece com Y agendado
+  anteriormente?" (mensagem da régua quando contrato é transferido)
+- **Confronto código vs narrativa anterior:** "o código sugere X, mas o
+  draft diz Y — quem está certo?"
+- **Top dúvidas reais de suporte/sucesso** — só o humano tem isso
+- **Race conditions / concorrência** — produto decide, código só sugere
+- **Bordas que o código não confirma:** rollback transacional, dead-letter
+  queues, behavior em conflicting writes
+
+**Princípio guia:** uma pergunta deve ser sobre *INTENÇÃO* ou *EXPERIÊNCIA*,
+não sobre *EXISTÊNCIA* ou *VALOR* (que o código tem).
+
+### 2.5c [BLOCKER] Code-first triage + article audit antes de Phase 6
+
+**Observação:** das 314 questões geradas, estimo que ~40-50% podem ser
+respondidas lendo até 2 arquivos do código. Mas há um insight maior:
+
+> Se o agente PERGUNTOU em vez de LER o código, significa que escreveu o
+> artigo SEM essa informação. Portanto a resposta provisória que está no
+> draft hoje pode estar **errada** ou **ausente**. Ruído nas perguntas é
+> também ruído nos artigos.
+
+A correção é **dupla**: tirar a pergunta do humano E corrigir o artigo
+para refletir a realidade do código.
+
+**Correção:** entre Phase 5 (stitching) e Phase 6 (entrevista humana),
+adicionar uma **Phase 5.5 — Code-first triage + article audit**:
+
+```
+Para cada capacidade (1 sub-agent por capacidade):
+  Inputs:
+    - Pending questions dessa capacidade
+    - Artigos da capacidade (.md + .tech.md de cada)
+    - Acesso ao repositório
+
+  Para cada question:
+    1. Tenta resolver via código (até 2 arquivos)
+
+    2. Se RESOLVE:
+       a. Lê o que o artigo diz hoje sobre o tema
+       b. Classifica: aligned | divergent | missing
+       c. Se divergent ou missing:
+          - Patcha o artigo (ambos os flavors quando relevante)
+          - Registra diff no retorno
+       d. Marca question como `status: "answered_by_code"`,
+          inclui `evidence_files: [path:line]` e
+          `article_action: aligned|corrected|added`
+
+    3. Se NÃO RESOLVE (precisa intenção/UX/produto):
+       - Marca como `status: "needs_human"`
+       - Mantém aberta para Phase 6
+
+  Retorna JSON consolidado por capacidade
+```
+
+**Regras críticas:**
+- Sub-agent só responde via código com EVIDÊNCIA EXPLÍCITA (file:line).
+  Se exige inferência → marca como needs_human.
+- Para correções de artigo:
+  - **Aplica diretamente** mudanças ortográficas (label exato de enum,
+    valor de constante, nome de tabela/coluna).
+  - **Propõe diff sem aplicar** quando a mudança é conceitual (regra de
+    negócio que parece errada, fluxo distorcido). Usuário revisa em batch.
+- Sempre commit por capacidade, com message diferenciando "phase-5.5
+  auto-fix from code" → permite revisão e revert seletivo.
+
+**Resultado esperado:**
+- 40-60% das questões removidas da entrevista humana
+- Artigos corrigidos para refletir o código real
+- Histórico claro do que foi auto-corrigido vs respondido pelo humano
+- Phase 6 fica focada em questões de produto puras (intenção, UX, integrações)
+
+**Verification pós-Phase 5.5:** após cada capacidade auto-corrigida,
+o sub-agent OU um audit script deve confirmar:
+- Nenhum artigo zerado
+- Diff faz sentido (não removeu conteúdo legítimo, só corrigiu)
+- pending_questions atualizadas no metadado do artigo
+
+### 2.5d [BLOCKER] Estrutura das perguntas por bloco temático (Phase 6)
+
+**Observação:** perguntas isoladas por origem cansam o usuário e perdem
+sinergia. Versão artesanal usa blocos temáticos (A-F) que dão "modo mental"
+ao entrevistado.
+
+**Correção:** em `references/phase-6-refinement.md`, depois do dedup,
+agrupar canonicals em blocos:
+
+- **A — Significado de produto / glossário:** o que esse termo, status,
+  campo significa no negócio?
+- **B — Transições e gatilhos:** quem dispara X → Y? cron? webhook? manual?
+- **C — Regras invariantes / constraints:** o que NUNCA pode acontecer?
+- **D — Vivência do usuário e suporte:** top dúvidas, copy, fluxos reais
+- **E — Bordas do código (hipóteses do agente):** o código sugere X,
+  mas não confirma
+- **F — Direção do guia (meta):** profundidade certa? faltou algo? próximo guia?
+
+Sub-agent extra após dedup: "classifica cada cluster em A/B/C/D/E/F".
+Entrevista percorre blocos na ordem (A→F), não capacidades.
+
+Bônus: a entrevista pode ser salva como markdown render por bloco
+(`.livedocs/interview/bloco-A.md`, etc.) que o usuário responde inline.
+
+### 2.5e [BLOCKER] Confronto código vs narrativa anterior
+
+**Observação:** na v1 artesanal, o agente comparou o que o usuário falou
+em entrevistas ANTERIORES com o que viu no código DEPOIS, e usou as
+divergências como gatilho de pergunta ("você disse X, código mostra Y").
+Isso gera perguntas de altíssima qualidade.
+
+**Correção:** se já existem entrevistas respondidas em
+`.livedocs/interview/*` ou `.livedocs/answered/*.md`, sub-agent que gera
+perguntas para um novo guia DEVE:
+1. Ler transcrições anteriores relevantes pro tema do novo guia
+2. Comparar com código atual
+3. Se houver discrepância clara, gera UMA pergunta de confronto
+   (com `confidence: high`, citando ambos os lados)
+4. Não gera perguntas redundantes com o que já foi respondido
+
+Este é o caminho pra docs vivos: cada nova rodada refina, não reinventa.
+
 ### 2.6 [NEXT] Phase 6 escala mal — sugerir thematic batching como técnica oficial
 
 **Observação:** 314 perguntas precisaram ser quebradas em 4 batches temáticos
