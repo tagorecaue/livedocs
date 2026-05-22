@@ -41,6 +41,48 @@ Plus state, pending questions, and screenshot TODOs in `.livedocs/`.
   Phase 0, used everywhere downstream. Translation is a separate
   downstream operation, not a runtime concern.
 
+## A real run, end-to-end
+
+Concrete example so you know what to expect. This is what happened on
+a real Brazilian SaaS the author dogfooded the skill on — a mid-sized
+production codebase (~38k semantic nodes per `graphify`), full
+backend + Vue 3 frontend, ~3 years of code, multi-tenant.
+
+The agent was [Hermes](https://github.com/NousResearch/hermes) running
+on Anthropic's Opus 4.7. Total wall-clock: roughly a working week,
+mostly attended; the long parts were dinner-and-come-back ones.
+
+| Phase | What the agent did | Numbers from this run |
+|---|---|---|
+| 0 — Guidance | Asked the maintainer to dump context, detected pt-BR | ~10 min, $0 |
+| 1 — Scan | Ran `graphify extract`, parsed routes/i18n/models | graphify run ~25 min; 139 routes, 272 i18n keys, 18 models; graph 38k nodes |
+| 2 — Taxonomy | Proposed 22 capabilities + 6 journeys from the signals | 1 LLM call, ~$0.40 |
+| 3 — Review | Maintainer split / merged / renamed via interactive menu | ~30 min of human time, a handful of split calls |
+| 4 — Drafts | 1 sub-agent per article, all in parallel batches | 76 articles × 2 flavors = 152 files; ~$74 total |
+| 5 — Stitch | Cross-links resolved, terminology harmonized | ~$20; flagged a few contradictions as pending questions |
+| **5.5 — Triage** | **Re-checked 314 pending questions against the code** | **120-ish auto-answered with file:line evidence; ~28 articles auto-patched; ~150 questions reached the human** |
+| 6 — Interview | Maintainer answered the 150 in thematic blocks (A–F) | ~3 hours of human time, two sittings; vague answers welcomed and saved |
+| 7 — Global update | Affected articles re-opened and rewritten with the answers | ~$15; ~30 articles touched |
+
+End state: a `docs/capacidades/` and `docs/jornadas/` tree the
+maintainer reviews, edits, and publishes — paired product + technical
+files for every capability, with `skill_version` stamped on each
+article so future maintenance knows what generated them.
+
+A few things that surfaced in this run and became durable lessons in
+the skill:
+
+- The maintainer reading 300+ raw pending questions was *the* pain
+  point. Phase 5.5 came from that and now removes most of them before
+  the interview even starts.
+- Thematic interview blocks (A: meaning, B: transitions, C:
+  invariants, D: UX/support, E: code edges, F: meta-direction) keep
+  the human in one mental mode at a time instead of context-switching
+  per question.
+- Sub-agents that wrote articles needed a verification step (`wc -c`
+  and sentinel grep) after every write, because one of them zeroed a
+  file silently and reported success. That's now a core principle.
+
 ## When to use it
 
 - The user asks you to "document this project", "create a help
@@ -48,15 +90,44 @@ Plus state, pending questions, and screenshot TODOs in `.livedocs/`.
   codebase", or similar.
 - You're in a real SaaS / web app repo (Vue / React / Next / etc.)
   with code worth documenting.
-- The user has `graphify` installed (recommended, not required —
-  routes/i18n/models extractors still produce a usable taxonomy
-  signal).
+- The codebase is large enough that hand-writing the help center
+  would take weeks but small enough to fit in the agent's reading
+  scope (sub-agents help here — see batch sizing in SKILL.md).
 
 ## When NOT to use it
 
 - The user wants to read existing docs → just open them.
 - Single ad-hoc README → write it directly, no ceremony needed.
 - Codebase is tiny (<10 files) → overkill.
+
+## Requirements
+
+The skill itself is just markdown — no install needed beyond dropping
+it into your agent's skills directory.
+
+**External dependencies on the user's machine:**
+
+- **A capable coding agent** with sub-agent / Task-like primitives,
+  file write, and shell access. Verified: Claude Code (Sonnet 4 /
+  Opus class), Hermes (Opus 4.7), Codex CLI. Smaller models drop
+  output quality noticeably — Phase 4 drafts especially.
+
+- **`graphify`** — strongly recommended. Without it Phase 1 still
+  works (routes/i18n/models extractors give a usable signal), but
+  the taxonomy proposal in Phase 2 is noticeably better when fed
+  the semantic graph. Install:
+
+  ```bash
+  uv tool install graphifyy
+  ```
+
+  Project: [`safishamsi/graphify`](https://github.com/safishamsi/graphify).
+  The skill detects whether `graphify` is on `$PATH` in Phase 1 and
+  warns gracefully if not.
+
+- **A git repo** — Phase 1 records the commit SHA at scan time;
+  Phase 4 / 5 / 5.5 commit per batch (one-commit-per-capability is
+  a non-negotiable core principle for recovery).
 
 ## Install
 
@@ -92,32 +163,13 @@ In the chat with your agent, after the skill is installed:
 I want to document this project. Use the livedocs-bootstrap skill.
 ```
 
-The agent takes over. It will:
-
-1. **Phase 0** — detect the project's language, confirm with you, ask
-   for free-form guidance about the product.
-2. **Phase 1** — scan the codebase: routes, i18n keys, models, plus
-   `graphify` if installed.
-3. **Phase 2** — propose a help-center taxonomy (capabilities + journeys).
-4. **Phase 3** — let you review, rename, merge, split.
-5. **Phase 4** — draft each article in isolated context (1 sub-agent
-   per article, parallelized).
-6. **Phase 5** — stitch cross-links, harmonize terms, flag contradictions.
-7. **Phase 5.5** — re-check pending questions against code, patch
-   articles that were written without the answer, filter the
-   interview to only what genuinely needs you.
-8. **Phase 6** — refinement interview in thematic blocks (A: meaning,
-   B: transitions, C: invariants, D: UX/support, E: code edges, F:
-   meta-direction).
-9. **Phase 7** — rewrite the affected articles with your answers.
-
-Each phase pauses for your consent before advancing. State persists in
+The agent takes over and walks the 8 phases (0 → 5.5 → 7), pausing
+for your consent between each. State persists in
 `.livedocs/state.md`; you can interrupt and resume any time.
 
 ## Cost expectations
 
-Driven by the agent's LLM provider. Observed in real runs (large
-~38k-node codebase, 80+ articles):
+Driven by the agent's LLM provider. Observed ranges across real runs:
 
 - Phase 4 draft: **$0.30–$1.00 per article** (3× variance with
   capability size).
@@ -128,6 +180,10 @@ Driven by the agent's LLM provider. Observed in real runs (large
 
 Real cost gets recorded in `.livedocs/state.md` as you go. Don't
 promise users a fixed estimate — measure with your own project first.
+
+The reference run above (76 articles + 6 journeys, large multi-tenant
+SaaS) landed around **~$110 in LLM spend, plus ~4 hours of attended
+human time** (mostly the interview).
 
 ## Languages
 
@@ -157,6 +213,7 @@ skills/livedocs-bootstrap/
 ├── SKILL.md                              # entry point, core principles
 ├── README.md                             # this file
 ├── CHANGELOG.md                          # version history
+├── fixtures/mini-saas/                   # tiny Vue 3 fixture for smoke testing
 └── references/
     ├── language-handling.md              # i18n contract — READ FIRST
     ├── privacy.md                        # context boundaries
@@ -198,8 +255,8 @@ state, pending, screenshot) are loaded on demand from any phase.
   the skill on the same project starts a new full run rather than
   diffing against the last one. Maintenance mode is planned.
 - **Cost variability across LLMs** — the skill doesn't pin a model.
-  Sonnet-class models produce noticeably better drafts than smaller
-  ones; the skill's quality follows the agent's quality.
+  Sonnet-class and Opus-class models produce noticeably better drafts
+  than smaller ones; the skill's quality follows the agent's quality.
 - **`is_intro` heuristic** — Phase 4 decides whether a capability
   needs an overview article. On small capabilities it sometimes still
   generates one; you can remove via Phase 3 before Phase 4 starts.
@@ -211,12 +268,17 @@ skill bumps, future maintenance can detect "this article was generated
 by an older skill, conventions may have changed" and offer a re-pass.
 See [`CHANGELOG.md`](CHANGELOG.md).
 
+## Author
+
+Built by **Tagôre Cardoso** ([@tagore](https://github.com/tagore))
+through iteration on a real production SaaS — the design choices that
+look opinionated here came from things going wrong in attended runs,
+not from whiteboarding. If a rule in `references/` reads like it was
+written after an incident, it usually was.
+
+Open to feedback, bug reports, and reproduction repos. Not open to
+external PRs yet — the skill is in validation through dogfooding.
+
 ## License
 
 AGPL-3.0-or-later (matches the parent LiveDocs project).
-
-## Contributing
-
-Not open to external contributions yet — the skill is in validation
-through dogfooding in real projects. When ready, this note disappears.
-File issues with reproductions; PRs may be accepted later.
