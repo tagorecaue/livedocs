@@ -142,6 +142,34 @@
    (c) inheritance from another guide. No invention. Mark 🟡 hypotheses
    in tech guides; never in product guides.
 
+3b. **UI language in product guides = the language the user actually sees.**
+    Hard rules for the `.md` (product flavor):
+
+    - NEVER write a foreign-language word in prose when the product UI is in
+      another language (e.g. an English term in a pt-BR product). Default: if
+      the codebase is mostly pt-BR, prose is pt-BR only.
+    - NEVER leak DB enum values, code constants, or technical identifiers
+      into product prose. Examples of what is FORBIDDEN in `.md`:
+      `before_tax`, `auto_split`, `REURB_S`, `VIA_RESIDENT`,
+      `project_stage_type`, `started_at`, `split_distribution`,
+      `localStorage`, `jsonb`, `enum`, `mutation`, `endpoint`, function names,
+      route paths inline in sentences.
+    - When the code uses a constant like `'before_tax'` to drive a UI control,
+      the sub-agent MUST hunt for the human-visible label. Where to look:
+      Vue/React templates near the field, `:items=` arrays in selects, `t()` /
+      `$t()` i18n keys, `text:` / `label:` props, `computed` getters that
+      translate enum → display text, formatters, `<option>` children.
+    - Use the visible label in the `.md`. If you can't locate it, register a
+      pending question (`"Qual texto aparece no seletor para X?"`) and put a
+      descriptive placeholder in the product language, never the raw constant.
+    - When in doubt: would a non-technical user (gestor, operador comercial,
+      morador) understand this sentence WITHOUT opening the codebase? If no,
+      rewrite.
+
+    Tech guides (`.tech.md`) are where constants, enum values, column names,
+    file paths and routes belong. That's their whole job — don't dilute them
+    by spilling tech detail into the product flavor.
+
 4. **Isolated context per draft.** In phase 4, each article gets its OWN focused
    sub-task. Don't try to draft 20 articles in one shot — quality collapses.
    Use separate tool calls / sub-agents when your platform supports it.

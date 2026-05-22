@@ -37,18 +37,44 @@ Each TODO is also registered in state for programmatic listing:
 1. **One screenshot, one TODO.** If a paragraph references 3 screens, write
    3 TODOs. Don't bundle.
 
-2. **Concrete routes only.** If the agent doesn't have a concrete path
-   (e.g., "vá em configurações"), DON'T write a TODO. The route field
-   would be hand-wavy and useless.
+2. **Be GENEROUS.** Product guides should have many screenshots — every UI
+   surface mentioned in prose is a candidate. The rule of thumb is
+   "1 screenshot every 2-4 paragraphs" in the operational sections.
+   When in doubt, write the TODO. A reviewer can drop it later; a missing
+   one is invisible.
 
-3. **`.md` only, never `.tech.md`.** Product guides need screenshots;
+   Specifically, ALWAYS write a TODO when the prose mentions:
+   - a concrete route (`/path`)
+   - a sidebar, panel, drawer, modal, dialog, or tab
+   - a button or action with a name (e.g. "botão Salvar splits")
+   - a list, grid, kanban column, or chart
+   - an empty state, success state, or error state worth showing
+   - a step inside a wizard or multi-step flow
+   - a settings section reachable from a named menu item
+
+3. **Identify the surface as precisely as you can.** A route is best, but a
+   named surface inside a route is also fine. Use the `Local:` field for
+   non-route surfaces:
+
+   ```markdown
+   > [!TODO:screenshot]
+   > Local: barra lateral do projeto → seção "Parceiros e splits"
+   > Rota base: `/project/:project`
+   > Descrição: <what this surface shows>
+   ```
+
+   Only OMIT the TODO when you genuinely don't know where the surface lives
+   (e.g. "em algum lugar das configurações" with no anchor at all). In that
+   case, register a pending question instead asking the user where it is.
+
+4. **`.md` only, never `.tech.md`.** Product guides need screenshots;
    tech guides have file:line references instead.
 
-4. **Description guides the capturer.** Don't write "tela do dashboard" —
+5. **Description guides the capturer.** Don't write "tela do dashboard" —
    write "Dashboard logo após login, com pelo menos 1 projeto cadastrado
    e 3 tarefas pendentes". The more context, the better the screenshot.
 
-5. **Status field stays simple:** `open` (default) | `captured` | `dropped`.
+6. **Status field stays simple:** `open` (default) | `captured` | `dropped`.
    Captured = human attached image. Dropped = route no longer relevant.
 
 ## When the user captures (future)

@@ -88,11 +88,59 @@ the user evaluate quality and budget.
    - When you want to reference another guide, write `[TODO:link={slug}]`. Phase 5 resolves.
    - When the code doesn't reveal intent/UX/integration, register a pending question — don't invent.
    - Each pending question: { question, provisional_answer (your best guess from code), confidence (low/high) }.
-   - When the article mentions a concrete UI route (e.g. `/projects/new`), insert IMMEDIATELY after that paragraph:
 
+   ### UI language (HARD RULE — applies to the product `.md` only)
+
+   - Write in the SAME language the product UI uses. Default for this repo: pt-BR.
+   - NEVER paste a foreign-language word, a DB enum value, a code constant, a
+     field/column name, a function name, or a route inline in product prose.
+     Forbidden examples: `before_tax`, `auto_split`, `REURB_S`, `started_at`,
+     `split_distribution`, `localStorage`, `endpoint`, `mutation`, `enum`.
+   - When a constant appears in code, HUNT for the user-visible label that
+     represents it. Where to look (in this order): Vue/React templates near
+     the field, `:items=` arrays in selects, `t()` / `$t()` i18n keys (note:
+     this codebase has decaying i18n, prefer the inline templates), `text:` /
+     `label:` props, `computed` getters that translate enum → display text,
+     `<option>` children, formatter functions.
+   - Use the visible label in the `.md`. If you can't find it, register a
+     pending question (`"Qual é o texto exibido para X?"`) and put a
+     descriptive placeholder in pt-BR, never the raw constant.
+   - Self-check before writing each paragraph: would a non-technical user
+     understand this sentence without opening the codebase? If no, rewrite.
+   - Tech detail (constants, enum values, columns, file:line, routes) goes in
+     `.tech.md` — that's where it belongs.
+
+   ### Screenshot TODOs (BE GENEROUS in the product `.md`)
+
+   - Target: roughly 1 screenshot every 2-4 paragraphs in operational
+     sections. When in doubt, write the TODO — a reviewer can drop it.
+   - Trigger a TODO whenever prose mentions any of:
+     * a concrete route (`/path`)
+     * a sidebar / panel / drawer / modal / dialog / tab
+     * a named button or action
+     * a list, grid, kanban column, chart
+     * an empty / success / error state
+     * a step inside a wizard or multi-step flow
+     * a settings section reachable from a named menu item
+   - Insert the admonition IMMEDIATELY after the paragraph that mentions the
+     surface. Use `Local:` for non-route surfaces:
+
+     ```markdown
      > [!TODO:screenshot]
-     > Rota: `/path`
-     > Descrição: <what this screen shows>
+     > Local: barra lateral do projeto → seção "Parceiros e splits"
+     > Rota base: `/project/:project`
+     > Descrição: <o que essa superfície mostra, com contexto suficiente>
+     ```
+
+     For pure-route surfaces:
+
+     ```markdown
+     > [!TODO:screenshot]
+     > Rota: `/pre-projects`
+     > Descrição: <o que essa tela mostra>
+     ```
+
+   - One screenshot, one TODO. Don't bundle multiple screens in one block.
 
    - Generate TWO files using the Write tool:
      * `docs/<kind>/<cap-slug>/<article-slug>.md` (product flavor, idioma pt-BR)

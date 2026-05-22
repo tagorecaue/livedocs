@@ -37,8 +37,18 @@ In this order, no skipping:
 8. **Veja também** — cross-links to 3-5 related guides (PHASE 5 fills this)
 
 **Zero technical jargon.** No column names, no function names, no
-`UPPER_SNAKE_CASE`. The voice is the one from `.livedocs/style.md` (or
-default: "tutorial conversacional, pt-BR, segunda pessoa").
+`UPPER_SNAKE_CASE`, no DB enum values (`before_tax`, `REURB_S`, etc.), no
+route paths inline, no English terms when the product UI is in another
+language. When a constant appears in code, find the user-visible label
+(templates, `:items=`, `text:`, computed getters, formatters) and use THAT.
+If the label can't be found, register a pending question — never leak the
+raw constant. Self-check: would a non-technical user (gestor, operador,
+morador) understand each sentence without opening the codebase? The voice
+is the one from `.livedocs/style.md` (or default: "tutorial conversacional,
+pt-BR, segunda pessoa").
+
+Tech detail belongs in `.tech.md`, NOT here. That separation is the whole
+point of the two flavors.
 
 ## Sections — technical flavor (`.tech.md`)
 
