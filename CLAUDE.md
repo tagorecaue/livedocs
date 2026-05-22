@@ -23,14 +23,17 @@ skills/livedocs-bootstrap/
 ```
 
 Repo root has:
-- `CONTEXT.md` — product glossary (the canonical product language;
-  edited during grilling sessions, not lightly).
-- `docs/adr/` — architecture decision records.
+- `README.md` — public entry point. Carries product framing and the
+  "Concepts" rationale section. This is where the canonical
+  vocabulary lives now (previously in `CONTEXT.md`, since absorbed).
 - `.spec/` — implementation plans for the skill itself (not for user-
   documented systems).
 
-Anything else (Python code, CLI utilities, etc.) **does not belong here**
-and has been deliberately removed.
+Anything else (Python code, CLI utilities, glossaries, ADRs for
+features that don't exist yet, etc.) **does not belong here** and has
+been deliberately removed. When the skill grows toward v2.0 features
+(publication, incremental maintenance), we'll bring back `docs/adr/`
+and write decisions as they're made — not before.
 
 ## How to contribute changes
 
@@ -103,14 +106,16 @@ change regresses any of them, fix before committing.
 For changes that only affect Phase 4+ (drafts onward), running just
 Phase 0–3 in the fixture is enough to catch basic regressions.
 
-### 6. Update CONTEXT.md only with intent
+### 6. Update README "Concepts" section only with intent
 
-`CONTEXT.md` is the product's canonical language. Don't edit it just
-to align with code. Edit it when a PRODUCT decision changes — the
-distinction between "capacidade" and "jornada" is product-level; how
-those concepts get serialized to disk is implementation-level. If you
-catch yourself updating CONTEXT.md to match an implementation
-artifact, you're probably doing it backwards.
+The README's "Concepts" section is the product's canonical
+vocabulary — capability, journey, screen, two flavors, pending
+questions, isolated context, guidance text, code capture point. Don't
+edit it just to align with code. Edit it when a **product** decision
+changes — the distinction between "capability" and "journey" is
+product-level; how those concepts get serialized to disk is
+implementation-level. If you catch yourself updating Concepts to
+match an implementation artifact, you're probably doing it backwards.
 
 ## Working on this repo with a coding agent
 

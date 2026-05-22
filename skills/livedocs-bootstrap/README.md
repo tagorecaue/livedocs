@@ -45,6 +45,104 @@ Plus state, pending questions, and screenshot TODOs in `.livedocs/`.
   Phase 0, used everywhere downstream. Translation is a separate
   downstream operation, not a runtime concern.
 
+## Concepts
+
+LiveDocs documents a SaaS through a small, opinionated vocabulary.
+The choices below all came from one place: trying to keep the doc set
+maintainable past ~20 articles, where naive approaches degrade fast.
+
+### Capability, Journey, Screen — and what gets its own page
+
+A **capability** is a business area as the user thinks of it
+("Recurring billing", "Resident onboarding", "Dunning"). It's the
+primary unit — typically 10–25 of them in a mid-sized SaaS, each
+becomes a category in the help center.
+
+A **journey** is a cross-cutting flow that touches several
+capabilities to deliver an outcome ("From unit registered to first
+paid invoice"). Secondary and optional — created only when explaining
+the path end-to-end adds more than explaining capability-by-capability
+would. Usually 5–15 per SaaS.
+
+A **screen** is a UI route. Crucially, **screens are not first-class
+documentation units** — they live as sections or screenshot anchors
+inside the article of the capability they serve. The reason is
+conceptual: knowledge belongs to a domain area, not to a button. A
+screen is just where you go to act on that knowledge. Promoting
+screens to standalone articles fragments the docs into
+one-page-per-route, which scales badly and gives users a help center
+that mirrors your nav rather than your domain.
+
+(Exception: a screen so conceptually dense that its content doesn't
+fit inside the parent capability gets its own page. Rare.)
+
+### Why two flavors per topic
+
+Every article is generated as a pair: `<slug>.md` (product) and
+`<slug>.tech.md` (technical). Same domain knowledge, two audiences.
+
+The product flavor uses the language the end user actually sees in the
+UI — no column names, no enum values, no route paths in prose. The
+technical flavor is the dev/AI counterpart, with `file:line` citations,
+numbered invariants, code anchors. "Documentation" alone is ambiguous;
+always qualify as "product guide" or "tech guide".
+
+The two never link to each other. Cross-references go only to other
+same-flavor guides. They describe the same thing for different
+audiences; linking them creates a loop that adds no value and confuses
+readers about which flavor they're in.
+
+### Why pending questions instead of interrupting
+
+When the agent is drafting an article and finds something the code
+doesn't reveal (intent, UX rationale, integration behavior under
+failure, the support team's most-asked questions), it does NOT pause and
+interrupt the user. It registers a **pending question**, writes a
+provisional answer into the draft labeled with a confidence flag, and
+moves on.
+
+Questions accumulate during Phase 4 and Phase 5. Phase 5.5 then
+re-checks every question against the code (filtering out the
+auto-answerable ones and patching articles that need fixing).
+Whatever survives reaches Phase 6 — a single batch interview in
+thematic blocks (meaning / transitions / invariants / UX-and-support /
+code edges / meta-direction).
+
+The separation is on purpose. The cost of context-switching the human
+("answer this one thing right now") is much higher than the cost of
+an extra phase that batches questions, and a batched interview ends
+up tighter because the queue gets deduped first — one answer often
+resolves several open questions.
+
+### Why isolated context per draft
+
+Phase 4 generates each article in **isolated context**. The sub-agent
+sees: the guidance, a menu of other articles' titles (no bodies), the
+article's own code anchors, and the style guide. Nothing else. No
+global "all docs in prompt".
+
+Two reasons. **Cost**: prompts that grow with N articles get
+expensive fast — N² in the worst case. **Coherence**: an LLM's
+attention degrades when it has to write coherently about *this*
+article while keeping *all the others* in mind. Cross-linking
+happens later in Phase 5, where the input is a short markdown index
+of titles and summaries, not raw code.
+
+### Why a guidance text exists
+
+Some product knowledge isn't in the code. The reasoning behind a
+decision, the customer profile, an upcoming pivot, an integration
+quirk the maintainer keeps in their head — code captures behavior,
+not intent. Phase 0 collects a free-form **guidance text** that gets
+included in every later prompt as instruction, not as content to copy.
+
+The complementary discipline is the **code capture point**: the git
+commit SHA at scan time, persisted alongside the taxonomy. It pins
+"this documentation was generated from this state of the code". The
+SHA becomes important once incremental maintenance lands — diffing a
+future PR against this SHA is how the skill will know which guides a
+change affects.
+
 ## A real run, end-to-end
 
 Concrete example so you know what to expect. This is what happened on

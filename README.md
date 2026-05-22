@@ -40,7 +40,11 @@ This decision was deliberate: an LLM driving the flow directly through a skill p
 
 ## The skill
 
-See `skills/livedocs-bootstrap/` for the bootstrap flow the agent follows. Glossary and canonical product language in `CONTEXT.md`. Architecture decisions in `docs/adr/`.
+See [`skills/livedocs-bootstrap/`](skills/livedocs-bootstrap/) for the
+bootstrap flow the agent follows. That folder is also where the
+canonical vocabulary lives — see the **Concepts** section of its
+[`README.md`](skills/livedocs-bootstrap/README.md) for capability /
+journey / screen / two-flavors / pending questions / isolated context.
 
 ## Roadmap
 
