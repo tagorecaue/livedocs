@@ -26,14 +26,18 @@ Repo root has:
 - `README.md` — public entry point. Carries product framing and the
   "Concepts" rationale section. This is where the canonical
   vocabulary lives now (previously in `CONTEXT.md`, since absorbed).
+- `docs/` — long-form material referenced from README but kept out of
+  it to control length (today: `case-study.md` with the real-run
+  per-phase breakdown). Add a file here when a section grows past
+  ~50 lines and starts overweighting the README.
 - `.spec/` — implementation plans for the skill itself (not for user-
   documented systems).
 
 Anything else (Python code, CLI utilities, glossaries, ADRs for
 features that don't exist yet, etc.) **does not belong here** and has
 been deliberately removed. When the skill grows toward v2.0 features
-(publication, incremental maintenance), we'll bring back `docs/adr/`
-and write decisions as they're made — not before.
+(publication, incremental maintenance), `docs/adr/` comes back — but
+we write decisions as they're made, not before.
 
 ## How to contribute changes
 

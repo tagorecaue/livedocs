@@ -53,9 +53,77 @@ devs). Both live inside the codebase. No cloud, no lock-in.
    → [Phase 7 — Global update](skills/livedocs-bootstrap/references/phase-7-global-update.md)
 
 Run real-world example: **76 articles + 6 journeys, ~$110 in LLM
-spend, ~4 hours of human time** (mostly the interview). See
-[A real run, end-to-end](#a-real-run-end-to-end) below for the
-phase-by-phase breakdown.
+spend, ~4 hours of human time** (mostly the interview). See the
+[case study](docs/case-study.md) for the full per-phase breakdown.
+
+---
+
+## Install
+
+Clone or fork this repo, then drop the skill folder where your agent
+looks for skills:
+
+### Claude Code
+
+```bash
+mkdir -p ~/.claude/skills
+ln -s "$PWD/skills/livedocs-bootstrap" ~/.claude/skills/livedocs-bootstrap
+```
+
+### Hermes
+
+```bash
+mkdir -p ~/.hermes/skills
+ln -s "$PWD/skills/livedocs-bootstrap" ~/.hermes/skills/livedocs-bootstrap
+```
+
+### Codex CLI / Copilot CLI / OpenCode / etc.
+
+Each has its own skills directory — check that agent's docs. The
+structure is generic: `SKILL.md` at the top, `references/*.md` next to
+it. Any agent that can read SKILL.md frontmatter and load referenced
+files works.
+
+## Quickstart
+
+In the chat with your agent, after the skill is installed:
+
+```
+I want to document this project. Use the livedocs-bootstrap skill.
+```
+
+The agent takes over and walks the 8 phases (0 → 5.5 → 7), pausing
+for your consent between each. State persists in
+`.livedocs/state.md`; you can interrupt and resume any time.
+
+## Requirements
+
+The skill itself is just markdown — no install needed beyond dropping
+it into your agent's skills directory.
+
+**External dependencies on the user's machine:**
+
+- **A capable coding agent** with sub-agent / Task-like primitives,
+  file write, and shell access. Verified: Claude Code (Sonnet 4 /
+  Opus class), Hermes (Opus 4.7), Codex CLI. Smaller models drop
+  output quality noticeably — Phase 4 drafts especially.
+
+- **`graphify`** — strongly recommended. Without it Phase 1 still
+  works (routes/i18n/models extractors give a usable signal), but
+  the taxonomy proposal in Phase 2 is noticeably better when fed
+  the semantic graph. Install:
+
+  ```bash
+  uv tool install graphifyy
+  ```
+
+  Project: [`safishamsi/graphify`](https://github.com/safishamsi/graphify).
+  The skill detects whether `graphify` is on `$PATH` in Phase 1 and
+  warns gracefully if not.
+
+- **A git repo** — Phase 1 records the commit SHA at scan time;
+  Phase 4 / 5 / 5.5 commit per batch (one-commit-per-capability is
+  a non-negotiable core principle for recovery).
 
 ---
 
@@ -201,48 +269,6 @@ SHA becomes important once incremental maintenance lands — diffing a
 future PR against this SHA is how the skill will know which guides a
 change affects.
 
-## A real run, end-to-end
-
-Concrete example so you know what to expect. This is what happened on
-a real Brazilian SaaS the author dogfooded the skill on — a mid-sized
-production codebase (~38k semantic nodes per `graphify`), full
-backend + Vue 3 frontend, ~3 years of code, multi-tenant.
-
-The agent was [Hermes](https://github.com/NousResearch/hermes) running
-on Anthropic's Opus 4.7. Total wall-clock: roughly a working week,
-mostly attended; the long parts were dinner-and-come-back ones.
-
-| Phase | What the agent did | Numbers from this run |
-|---|---|---|
-| 0 — Guidance | Asked the maintainer to dump context, detected pt-BR | ~10 min, $0 |
-| 1 — Scan | Ran `graphify extract`, parsed routes/i18n/models | graphify run ~25 min; 139 routes, 272 i18n keys, 18 models; graph 38k nodes |
-| 2 — Taxonomy | Proposed 22 capabilities + 6 journeys from the signals | 1 LLM call, ~$0.40 |
-| 3 — Review | Maintainer split / merged / renamed via interactive menu | ~30 min of human time, a handful of split calls |
-| 4 — Drafts | 1 sub-agent per article, all in parallel batches | 76 articles × 2 flavors = 152 files; ~$74 total |
-| 5 — Stitch | Cross-links resolved, terminology harmonized | ~$20; flagged a few contradictions as pending questions |
-| **5.5 — Triage** | **Re-checked 314 pending questions against the code** | **120-ish auto-answered with file:line evidence; ~28 articles auto-patched; ~150 questions reached the human** |
-| 6 — Interview | Maintainer answered the 150 in thematic blocks (A–F) | ~3 hours of human time, two sittings; vague answers welcomed and saved |
-| 7 — Global update | Affected articles re-opened and rewritten with the answers | ~$15; ~30 articles touched |
-
-End state: a `docs/capacidades/` and `docs/jornadas/` tree the
-maintainer reviews, edits, and publishes — paired product + technical
-files for every capability, with `skill_version` stamped on each
-article so future maintenance knows what generated them.
-
-A few things that surfaced in this run and became durable lessons in
-the skill:
-
-- The maintainer reading 300+ raw pending questions was *the* pain
-  point. Phase 5.5 came from that and now removes most of them before
-  the interview even starts.
-- Thematic interview blocks (A: meaning, B: transitions, C:
-  invariants, D: UX/support, E: code edges, F: meta-direction) keep
-  the human in one mental mode at a time instead of context-switching
-  per question.
-- Sub-agents that wrote articles needed a verification step (`wc -c`
-  and sentinel grep) after every write, because one of them zeroed a
-  file silently and reported success. That's now a core principle.
-
 ## When to use it
 
 - The user asks you to "document this project", "create a help
@@ -261,73 +287,6 @@ the skill:
 - Single ad-hoc README → write it directly, no ceremony needed.
 - Codebase is tiny (<10 files) → overkill.
 
-## Requirements
-
-The skill itself is just markdown — no install needed beyond dropping
-it into your agent's skills directory.
-
-**External dependencies on the user's machine:**
-
-- **A capable coding agent** with sub-agent / Task-like primitives,
-  file write, and shell access. Verified: Claude Code (Sonnet 4 /
-  Opus class), Hermes (Opus 4.7), Codex CLI. Smaller models drop
-  output quality noticeably — Phase 4 drafts especially.
-
-- **`graphify`** — strongly recommended. Without it Phase 1 still
-  works (routes/i18n/models extractors give a usable signal), but
-  the taxonomy proposal in Phase 2 is noticeably better when fed
-  the semantic graph. Install:
-
-  ```bash
-  uv tool install graphifyy
-  ```
-
-  Project: [`safishamsi/graphify`](https://github.com/safishamsi/graphify).
-  The skill detects whether `graphify` is on `$PATH` in Phase 1 and
-  warns gracefully if not.
-
-- **A git repo** — Phase 1 records the commit SHA at scan time;
-  Phase 4 / 5 / 5.5 commit per batch (one-commit-per-capability is
-  a non-negotiable core principle for recovery).
-
-## Install
-
-Clone or fork this repo, then drop the skill folder where your agent
-looks for skills:
-
-### Claude Code
-
-```bash
-mkdir -p ~/.claude/skills
-ln -s "$PWD/skills/livedocs-bootstrap" ~/.claude/skills/livedocs-bootstrap
-```
-
-### Hermes
-
-```bash
-mkdir -p ~/.hermes/skills
-ln -s "$PWD/skills/livedocs-bootstrap" ~/.hermes/skills/livedocs-bootstrap
-```
-
-### Codex CLI / Copilot CLI / OpenCode / etc.
-
-Each has its own skills directory — check that agent's docs. The
-structure is generic: `SKILL.md` at the top, `references/*.md` next to
-it. Any agent that can read SKILL.md frontmatter and load referenced
-files works.
-
-## Quickstart
-
-In the chat with your agent, after the skill is installed:
-
-```
-I want to document this project. Use the livedocs-bootstrap skill.
-```
-
-The agent takes over and walks the 8 phases (0 → 5.5 → 7), pausing
-for your consent between each. State persists in
-`.livedocs/state.md`; you can interrupt and resume any time.
-
 ## Cost expectations
 
 Driven by the agent's LLM provider. Observed ranges across real runs:
@@ -342,9 +301,9 @@ Driven by the agent's LLM provider. Observed ranges across real runs:
 Real cost gets recorded in `.livedocs/state.md` as you go. Don't
 promise users a fixed estimate — measure with your own project first.
 
-The reference run above (76 articles + 6 journeys, large multi-tenant
-SaaS) landed around **~$110 in LLM spend, plus ~4 hours of attended
-human time** (mostly the interview).
+The [case study](docs/case-study.md) (76 articles + 6 journeys, large
+multi-tenant SaaS) landed around **~$110 in LLM spend, plus ~4 hours
+of attended human time** (mostly the interview).
 
 ## Languages
 
@@ -373,10 +332,11 @@ Full policy: [`references/privacy.md`](skills/livedocs-bootstrap/references/priv
 livedocs/
 ├── README.md                                 # this file
 ├── CLAUDE.md / AGENTS.md                     # dev guide for contributors
-├── CHANGELOG.md                              # version history (mirrored under skill)
 ├── LICENSE                                   # AGPL-3.0-or-later
 ├── assets/
 │   └── banner.png                            # social card image
+├── docs/
+│   └── case-study.md                         # real-run breakdown referenced from README
 └── skills/
     └── livedocs-bootstrap/
         ├── SKILL.md                          # entry point, core principles
