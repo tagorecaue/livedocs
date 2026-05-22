@@ -78,8 +78,21 @@ output is patches, not full rewrites.
    6. NEVER reorder or rewrite conceptual content. Mudanças mínimas: links,
       term tweaks, contradiction markers. Keep the body intact.
 
-   7. The .tech.md version: stitch SAME rules but with tech-flavor index.
-      Don't cross-link between product and tech (always same flavor).
+   7. **CROSS-FLAVOR PROHIBITED.** `.md` links ONLY to other `.md`.
+      `.tech.md` links ONLY to other `.tech.md`. The .tech.md version
+      stitches under the SAME rules but with the tech-flavor index.
+
+      Special case — `.tech.md` containing `[TODO:link=<same-slug>]`
+      pointing to its OWN product sibling (e.g.
+      `contratos/gerar-assinar-contrato.tech.md` has
+      `[TODO:link=contratos/gerar-assinar-contrato]`):
+      **REMOVE the placeholder and its surrounding phrase entirely** —
+      do NOT leave as unresolved, do NOT add a cross-flavor link.
+      Report the slug in a `cross_flavor_removed` array of the response.
+
+      This rule exists because the .tech.md and .md of the same article
+      describe the same thing for different audiences — linking between
+      them creates a loop that adds no value.
 
    8. Output ONLY JSON, no prose:
 
@@ -93,9 +106,11 @@ output is patches, not full rewrites.
      "contradictions": [
        {"this_guide_says": "...", "other_guide": "slug", "other_says": "..."}
      ],
+     "cross_flavor_removed": ["contratos/gerar-assinar-contrato"],
      "new_pending_questions": [
        {"question": "...", "provisional_answer": "...", "confidence": "low"}
-     ]
+     ],
+     "verification_passed": true
    }
    ```
    ```
