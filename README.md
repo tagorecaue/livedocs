@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/banner.png" alt="LiveDocs banner" width="100%">
+
 # LiveDocs
 
 **Living documentation for SaaS — interview-driven, agent-powered, always aligned with the code.**

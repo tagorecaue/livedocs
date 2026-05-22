@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../../assets/banner.png" alt="livedocs-bootstrap banner" width="100%">
+</p>
+
 # livedocs-bootstrap
 
 Generate **living documentation** for an existing SaaS codebase, driven
@@ -270,11 +274,14 @@ See [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Author
 
-Built by **Tagôre Cardoso** ([@tagore](https://github.com/tagore))
-through iteration on a real production SaaS — the design choices that
+Built by **Tagôre Cardoso** — designed and dogfooded in
+🇧🇷 **Brazil**, on a real production SaaS. The design choices that
 look opinionated here came from things going wrong in attended runs,
 not from whiteboarding. If a rule in `references/` reads like it was
 written after an incident, it usually was.
+
+Find Tagôre on [LinkedIn](https://www.linkedin.com/in/tagorecaue/)
+or [GitHub](https://github.com/tagorecaue).
 
 Open to feedback, bug reports, and reproduction repos. Not open to
 external PRs yet — the skill is in validation through dogfooding.
@@ -282,3 +289,7 @@ external PRs yet — the skill is in validation through dogfooding.
 ## License
 
 AGPL-3.0-or-later (matches the parent LiveDocs project).
+
+---
+
+<sub>Made in 🇧🇷 Brazil by [Tagôre Cardoso](https://www.linkedin.com/in/tagorecaue/) · [GitHub](https://github.com/tagorecaue)</sub>
