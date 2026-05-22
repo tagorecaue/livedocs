@@ -89,6 +89,39 @@ the user evaluate quality and budget.
    - When the code doesn't reveal intent/UX/integration, register a pending question — don't invent.
    - Each pending question: { question, provisional_answer (your best guess from code), confidence (low/high) }.
 
+   ### Pending questions — bar for registering
+
+   **Guiding principle: a pending question is about INTENT or EXPERIENCE,
+   not about EXISTENCE or VALUE.**
+
+   - Existence and value live in code. Read it harder.
+   - Intent ("why was this designed this way?") and experience
+     ("what do support tickets ask about this screen?") live in the
+     user's head. Those are the questions worth asking.
+
+   🚫 Do NOT register questions like (these are auto-answerable):
+   - "What's the label for enum X?" → read the template / i18n / formatter
+   - "What are the valid values of enum X?" → read the migration / schema
+   - "Where is cron job Y?" → grep `src/cron/`
+   - "Does ADR-NNNN exist?" → `ls docs/adr/` or grep
+   - "Is column Z nullable?" → read the schema/migration
+   - "What's the shape of jsonb J?" → read the TS interface / Zod schema
+   - "Does function W exist?" → grep
+   - "What endpoint does button B hit?" → read its click handler
+   - "What's the exact toast text?" → grep the codebase
+
+   ✅ DO register questions like:
+   - "Why was this designed to do A instead of B?"
+   - "Top 3 dúvidas support actually gets about this screen?"
+   - "Is feature F still used or dead code nobody removed?"
+   - "When entity A is transferred, what happens to scheduled job J?"
+   - "Race condition between two writers — intentional or risk?"
+   - "External API returns 429 — what should the UX do?"
+
+   See `references/pending-questions.md` for the full heuristic.
+   Phase 5.5 will filter out 🚫-pattern questions and patch the article
+   if the answer is in the code — but it's cheaper to never write them.
+
    ### UI language (HARD RULE — applies to the product `.md` only)
 
    - Write in the SAME language the product UI uses. Default for this repo: pt-BR.
@@ -163,6 +196,26 @@ the user evaluate quality and budget.
    - Resumo do domínio inteiro da capacidade.
    - Linka os irmãos com `[TODO:link=<cap>/<sibling-slug>]`.
    - NÃO entre no detalhe operacional dos irmãos — cada um tem artigo próprio.
+
+   ## Prior interview pass (when previous answered interviews exist)
+
+   Before drafting, scan `.livedocs/interview/` and `.livedocs/answered/`
+   for any prior `.interview.md` files relevant to this article's
+   capability or topic. If you find prior answers:
+
+   1. Read them. They are HIGHER PRIORITY than your own inference.
+   2. Compare the prior human answers with what the code shows NOW.
+   3. If they AGREE → use the human's wording in the draft (.md), the
+      code's facts in .tech.md.
+   4. If they DISAGREE → generate ONE pending question of `category: E`
+      (code-suggested edges) with `confidence: high`, of the form:
+      `"O draft anterior diz X, mas o código no arquivo Y:linha Z mostra
+      W. Qual versão é a correta hoje?"`. Cite both sides literally.
+   5. DO NOT generate a pending question for facts the human already
+      answered in a prior interview, unless the code now contradicts
+      the answer.
+
+   This is the path to living docs: each new pass refines, never reinvents.
 
    ## Output
 
