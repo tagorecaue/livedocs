@@ -4,10 +4,63 @@
 
 # livedocs-bootstrap
 
-Generate **living documentation** for an existing SaaS codebase, driven
-end-to-end by a capable coding agent (Claude Code, Codex CLI, Cursor,
-Hermes, etc.). No binary, no Python runtime — just a folder of markdown
-files the agent reads and follows.
+Document any SaaS, end-to-end, from its source code plus a guided
+interview with the developer. The agent reads the repo, proposes a
+taxonomy, drafts every article, then asks you only the questions the
+code can't answer.
+
+Two paired outputs per topic: a **product guide** (no jargon, for end
+users) and a **technical guide** (with `file:line` references, for
+devs). Both live inside the codebase. No cloud, no lock-in.
+
+## How it works, in 5 steps
+
+1. **Read the repo, propose a taxonomy.** Generates a semantic graph
+   of the system, derives categories and articles. You approve.
+   → [Phase 1 — Scan](references/phase-1-scan.md),
+   [Phase 2 — Taxonomy](references/phase-2-taxonomy.md),
+   [Phase 3 — Review](references/phase-3-review.md)
+
+2. **Write every article in parallel, in two paired versions.**
+   Product flavor (no jargon) and technical flavor (`file:line` refs).
+   Marks where screenshots are needed. Logs every question the code
+   alone can't resolve.
+   → [Phase 4 — Drafts](references/phase-4-pass1-drafts.md),
+   [Article format](references/article-format.md),
+   [Screenshot TODOs](references/screenshot-todos.md),
+   [Pending questions](references/pending-questions.md)
+
+3. **Cross-link the articles, deduplicate the questions.** Resolves
+   `[TODO:link=…]` placeholders, harmonizes terms, flags contradictions
+   between guides.
+   → [Phase 5 — Stitch](references/phase-5-pass2-stitching.md),
+   [Phase 5.5 — Code-first triage](references/phase-5.5-triage.md) (re-checks
+   every pending question against the code; only what truly needs a
+   human reaches you)
+
+4. **Interview you in chat**, with whatever survived the triage. Each
+   question shows the agent's guess + confidence level. You confirm or
+   correct, in thematic blocks (meaning / transitions / invariants /
+   UX & support / code edges / direction).
+   → [Phase 6 — Refinement](references/phase-6-refinement.md)
+
+5. **Rewrite only the affected articles** from your answers.
+   → [Phase 7 — Global update](references/phase-7-global-update.md)
+
+Run real-world example: **76 articles + 6 journeys, ~$110 in LLM
+spend, ~4 hours of human time** (mostly the interview). See
+[A real run, end-to-end](#a-real-run-end-to-end) below for the
+phase-by-phase breakdown.
+
+---
+
+## What it is, technically
+
+A skill — a folder of markdown files an agent reads and follows.
+No binary, no Python runtime, nothing to install beyond dropping it
+into your coding agent's skills directory (Claude Code, Codex CLI,
+Cursor, Hermes, etc. — any agent with sub-agent / Task primitives,
+file write, and shell access).
 
 The output is a `docs/` directory with paired guides:
 
