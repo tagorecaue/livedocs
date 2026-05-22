@@ -26,6 +26,10 @@ Repo root has:
 - `README.md` — public entry point. Carries product framing and the
   "Concepts" rationale section. This is where the canonical
   vocabulary lives now (previously in `CONTEXT.md`, since absorbed).
+- `.claude-plugin/plugin.json` — manifest that makes the repo
+  installable via `npx skills@latest add tagorecaue/livedocs`. Lists
+  the skills under `skills/` that get exposed. **Update this when
+  adding a new top-level skill.**
 - `docs/` — long-form material referenced from README but kept out of
   it to control length (today: `case-study.md` with the real-run
   per-phase breakdown). Add a file here when a section grows past

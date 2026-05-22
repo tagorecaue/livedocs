@@ -8,6 +8,13 @@ clarifications and pitfall fixes.
 Each version's date is when the change landed in the skill's git
 history.
 
+## Repo-level changes (not skill version bumps)
+
+- **2026-05-22** — `.claude-plugin/plugin.json` added at the repo
+  root so `npx skills@latest add tagorecaue/livedocs` works. New
+  companion skill `livedocs-setup` (v1.0.0) checks for `graphify`
+  and installs it via `uv` or `pipx` on first run.
+
 ## [1.3.0] — 2026-05-22
 
 ### Added

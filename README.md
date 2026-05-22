@@ -51,7 +51,28 @@ time. Full breakdown in the [case study](docs/case-study.md).
 
 ## Install
 
-Clone or fork, then symlink the skill into your agent's skills dir.
+```bash
+npx skills@latest add tagorecaue/livedocs
+```
+
+This walks you through which coding agent(s) to install the skill on
+(Claude Code, Codex, Cursor, OpenCode, etc.) and symlinks the skill
+into each agent's skills directory.
+
+Then, in your agent, run the one-time environment setup:
+
+```
+/setup-livedocs
+```
+
+It checks for `graphify` and installs it if missing
+(via `uv` or `pipx`).
+
+<details>
+<summary>Manual install (no npm)</summary>
+
+Clone or fork this repo, then symlink the skill into your agent's
+skills dir:
 
 ```bash
 # Claude Code
@@ -61,8 +82,13 @@ ln -s "$PWD/skills/livedocs-bootstrap" ~/.claude/skills/livedocs-bootstrap
 ln -s "$PWD/skills/livedocs-bootstrap" ~/.hermes/skills/livedocs-bootstrap
 ```
 
-Other agents (Codex, Cursor, OpenCode, etc.) — same idea, just point
-their skills directory at the folder.
+Then install `graphify` manually:
+
+```bash
+uv tool install graphifyy
+```
+
+</details>
 
 ## Quickstart
 
@@ -80,11 +106,13 @@ can interrupt and resume any time.
 - A coding agent with sub-agent / Task primitives, file write, and
   shell. Verified: Claude Code (Sonnet 4 / Opus), Hermes (Opus 4.7),
   Codex CLI. Smaller models drop Phase 4 quality noticeably.
-- [`graphify`](https://github.com/safishamsi/graphify) (strongly
-  recommended) — `uv tool install graphifyy`. Without it Phase 2's
-  taxonomy is weaker, but the rest still works.
+- [`graphify`](https://github.com/safishamsi/graphify) — installed
+  automatically by `/setup-livedocs`. Without it Phase 2's taxonomy
+  is weaker, but the rest still works.
 - A git repo (Phase 1 records the scan SHA; later phases
   commit-per-batch).
+- `node` / `npx` if you use the one-line install above. Skip if you
+  do the manual install.
 
 ## When to use it / when not to
 

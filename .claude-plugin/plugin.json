@@ -1,0 +1,8 @@
+{
+  "name": "livedocs",
+  "description": "Document any SaaS end-to-end from its source code plus a guided developer interview. Produces paired product + technical guides (.md / .tech.md) per topic.",
+  "skills": [
+    "./skills/livedocs-bootstrap",
+    "./skills/livedocs-setup"
+  ]
+}
