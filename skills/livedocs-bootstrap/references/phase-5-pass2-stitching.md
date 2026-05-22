@@ -4,8 +4,8 @@
 Walk each drafted article and:
 1. Resolve `[TODO:link={slug}]` placeholders into real markdown links
 2. Add cross-links to OTHER guides that should reference this one
-3. Harmonize terminology (if guide A says "fatura" and B says "cobrança",
-   pick the dominant term across the help center)
+3. Harmonize terminology (if guide A says term X and B says term Y for
+   the same concept, pick the dominant one across the help center)
 4. Flag direct contradictions between guides
 
 Smaller per-call cost than Phase 4 because input is markdown (not code) and
@@ -15,8 +15,8 @@ output is patches, not full rewrites.
 
 > **DELEGATION**: Each stitching call needs to read 2 markdown files
 > (.md and .tech.md of the article) and produces patches via Write.
-> Spawne sub-agent por artigo, mesmo padrão da Phase 4. Você recebe só
-> o JSON de retorno (links_added, contradictions, etc.).
+> Spawn one sub-agent per article, same pattern as Phase 4. You receive
+> only the JSON return (links_added, contradictions, etc.).
 
 1. **List drafted articles + journeys.** Skip anything still in `pending`
    or already `stitched`. If the user just finished a Phase 4 batch with
@@ -56,7 +56,7 @@ output is patches, not full rewrites.
       `[<title>](path/relative/to/this/file)`.
 
       Path computation (use forward slashes):
-        - This guide's path: `docs/<kind>/<cap-slug>/<article-slug>.md` (or `docs/jornadas/<slug>.md`)
+        - This guide's path: `docs/<kind-dir>/<cap-slug>/<article-slug>.md` (or `docs/<journeys-dir>/<slug>.md`)
         - Target's path: same logic
         - Compute the relative path between them.
 
@@ -75,8 +75,8 @@ output is patches, not full rewrites.
       guide's first paragraph says NOT-X about F, register in
       `contradictions`: { this_guide_says, other_guide_slug, other_says }.
 
-   6. NEVER reorder or rewrite conceptual content. Mudanças mínimas: links,
-      term tweaks, contradiction markers. Keep the body intact.
+   6. NEVER reorder or rewrite conceptual content. Minimum changes only:
+      links, term tweaks, contradiction markers. Keep the body intact.
 
    7. **CROSS-FLAVOR PROHIBITED.** `.md` links ONLY to other `.md`.
       `.tech.md` links ONLY to other `.tech.md`. The .tech.md version
@@ -102,7 +102,7 @@ output is patches, not full rewrites.
      "links_added": 4,
      "todos_resolved": 3,
      "todos_unresolved": ["mystery-slug"],
-     "terms_harmonized": [{"from": "fatura", "to": "cobrança"}],
+     "terms_harmonized": [{"from": "<source term>", "to": "<canonical term>"}],
      "contradictions": [
        {"this_guide_says": "...", "other_guide": "slug", "other_says": "..."}
      ],
@@ -115,26 +115,28 @@ output is patches, not full rewrites.
    ```
    ```
 
-4. **For each contradiction returned**, generate a pending question:
-   *"Contradição detectada: este guia diz X, guia <slug> diz not-X. Qual é
-   o correto?"*. Add to state.
+4. **For each contradiction returned**, generate a pending question
+   (text in `{lang}`, semantic equivalent of):
+   *"Contradiction detected: this guide says X, guide `<slug>` says
+   not-X. Which is correct?"*. Add to state.
 
 5. **Update state.md** — mark each stitched article, log links_added /
    contradictions counts.
 
-6. **At the end:**
+6. **At the end** (render in `{lang}`):
    ```
-   ✓ Pass 2 concluída — 4 artigos stitchados
-     - 12 links resolvidos
-     - 3 links unresolved (slugs ainda não criados)
-     - 2 contradições viraram pending questions
-     - 1 termo harmonizado: "fatura" → "cobrança"
+   ✓ Pass 2 done — 4 articles stitched
+     - 12 links resolved
+     - 3 links unresolved (slugs not created yet)
+     - 2 contradictions became pending questions
+     - 1 term harmonized: "<from>" → "<to>"
 
-   Próximo passo: Phase 6 (refinement) — vou consolidar e te perguntar as
-   pending questions. Opções:
-     [1] Avançar pra Phase 6
-     [2] Pular Phase 6 (mantém pending questions abertas, roda Phase 7 vazia)
-     [3] Voltar pra Phase 4 (gerar mais artigos antes de stitchar)
+   Next step: Phase 5.5 (code-first triage) — re-checks pending
+   questions against code and patches articles that need it.
+   Options:
+     [1] Advance to Phase 5.5
+     [2] Skip 5.5, go straight to Phase 6 (not recommended)
+     [3] Back to Phase 4 (generate more articles before stitching)
    ```
 
 ## Pitfalls
@@ -143,7 +145,7 @@ output is patches, not full rewrites.
   sub-agent's output produces obviously wrong paths, retry with explicit
   paths in the prompt.
 - **Over-linking**: agent might convert every domain term to a link, making
-  text noisy. Re-prompt with "máximo 1 link por conceito por parágrafo".
+  text noisy. Re-prompt with "max 1 link per concept per paragraph".
 - **Tech ↔ product contamination**: agent might link product.md to tech.md.
   Reject and flag, never store these.
 - **Recursive contradictions**: A vs B vs C all say different things. Don't

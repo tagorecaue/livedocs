@@ -6,7 +6,7 @@ description: |
   paired product + technical guides organized as Categories (capabilities) and Articles,
   with cross-links, pending questions, and screenshot TODOs. Drives the whole 7-phase
   flow without leaving the chat.
-version: 1.1.0
+version: 1.2.0
 author: Tagore + LiveDocs
 ---
 
@@ -16,21 +16,25 @@ You are about to bootstrap **living documentation** for a SaaS project. This ski
 replaces the Python CLI: the entire 7-phase flow runs inside this conversation,
 with you as the orchestrator and the user as the maintainer.
 
-The output is a `docs/` directory full of paired markdown files:
+The output is a `docs/` directory full of paired markdown files. The
+top-level directory names render in `{lang}` (the language chosen in
+Phase 0):
 
 ```
 docs/
-├── capacidades/
+├── <capabilities-dir>/         ← e.g. "capabilities/" (en) or "capacidades/" (pt-BR)
 │   ├── <capability-slug>/
 │   │   ├── <article-slug>.md           ← product flavor (end-user)
 │   │   ├── <article-slug>.tech.md      ← technical flavor (devs)
 │   │   └── ...
 │   └── ...
-└── jornadas/
+└── <journeys-dir>/             ← e.g. "journeys/" (en) or "jornadas/" (pt-BR)
     ├── <journey-slug>.md
     ├── <journey-slug>.tech.md
     └── ...
 ```
+
+See `references/language-handling.md` for the lookup table per `{lang}`.
 
 Plus a state file you maintain to track progress:
 
@@ -98,6 +102,7 @@ Each phase has a detailed reference. Load it when you enter that phase:
 
 Shared formats and conventions:
 
+- **Language handling (READ FIRST)** — `references/language-handling.md`
 - **Article markdown structure** — `references/article-format.md`
 - **State file format** — `references/state-format.md`
 - **Screenshot TODOs** — `references/screenshot-todos.md`
@@ -111,24 +116,29 @@ When invoked, do these in order **without asking permission** — this is the
 canonical entry sequence:
 
 1. **Read state if exists.** Run `cat .livedocs/state.md 2>/dev/null` (or
-   equivalent). If it has content, parse the "Current phase" line and
-   resume from there — announce: *"Retomando bootstrap da fase N. Continue?"*
+   equivalent). If it has content, parse the "Current phase" line and the
+   `Lang:` field. Resume from there — announce, rendered in `{lang}`:
+   *"Resuming bootstrap from phase N. Continue?"*
 
-2. **If no state yet, greet and confirm intent.** Brief message:
-   > *"Olá! Vou guiar o bootstrap da documentação deste projeto. São 7 fases,
-   > leva cerca de 2-4h de trabalho (mais o tempo das chamadas LLM). Posso
-   > começar pela fase 0?"*
+2. **If no state yet, greet and confirm intent.** Use the language you
+   detect in the codebase (or English as default) for this first message
+   — Phase 0 will let the user override. Brief message, equivalent to:
+
+   > *"Hi! I'll guide the bootstrap of this project's documentation. It's
+   > 7 phases, takes ~2-4h of work plus LLM call time. Can I start
+   > with phase 0?"*
 
 3. **On user OK, load `references/phase-0-guidance.md`** and follow it.
+   Phase 0 is where the run language is locked in (`Lang:` in state).
 
 4. **At every save**, write to `.livedocs/state.md`. **At every transition**,
-   tell the user what changed and ask consent for next phase.
+   tell the user what changed (in `{lang}`) and ask consent for next phase.
 
 ---
 
 ## Core principles (read once, follow always)
 
-1. **DELEGATE braçal work to sub-agents.** This is critical. Your platform
+1. **DELEGATE the grunt work to sub-agents.** This is critical. Your platform
    likely supports spawning child agents (Task tool, delegate_task, etc.) — USE
    THEM for: graphify execution monitoring, file extraction (routes/i18n/models
    scans), each individual article draft in phase 4, each stitching pass in 5,
@@ -153,29 +163,32 @@ canonical entry sequence:
     Hard rules for the `.md` (product flavor):
 
     - NEVER write a foreign-language word in prose when the product UI is in
-      another language (e.g. an English term in a pt-BR product). Default: if
-      the codebase is mostly pt-BR, prose is pt-BR only.
-    - NEVER leak DB enum values, code constants, or technical identifiers
-      into product prose. Examples of what is FORBIDDEN in `.md`:
-      `before_tax`, `auto_split`, `REURB_S`, `VIA_RESIDENT`,
-      `project_stage_type`, `started_at`, `split_distribution`,
-      `localStorage`, `jsonb`, `enum`, `mutation`, `endpoint`, function names,
-      route paths inline in sentences.
-    - When the code uses a constant like `'before_tax'` to drive a UI control,
-      the sub-agent MUST hunt for the human-visible label. Where to look:
-      Vue/React templates near the field, `:items=` arrays in selects, `t()` /
-      `$t()` i18n keys, `text:` / `label:` props, `computed` getters that
-      translate enum → display text, formatters, `<option>` children.
-    - Use the visible label in the `.md`. If you can't locate it, register a
-      pending question (`"Qual texto aparece no seletor para X?"`) and put a
-      descriptive placeholder in the product language, never the raw constant.
-    - When in doubt: would a non-technical user (gestor, operador comercial,
-      morador) understand this sentence WITHOUT opening the codebase? If no,
+      another language. The product `.md` is written entirely in `{lang}`
+      (the language locked in Phase 0 and stored in `state.md` under `Lang:`).
+    - NEVER leak DB enum values, code constants, technical identifiers,
+      column names, function names, or route paths into product prose.
+      Anything that looks like a snake_case or camelCase token, an SQL enum
+      value, a path with slashes, or a function name — all forbidden in
+      product prose.
+    - When the code uses a constant (e.g. an enum value) to drive a UI
+      control, the sub-agent MUST hunt for the human-visible label. Where
+      to look: Vue/React templates near the field, `:items=` arrays in
+      selects, `t()` / `$t()` i18n keys, `text:` / `label:` props,
+      `computed` getters that translate enum → display text, formatters,
+      `<option>` children.
+    - Use the visible label in the `.md`. If you can't locate it, register
+      a pending question (in `{lang}`: "What label appears in the UI for X?")
+      and put a descriptive placeholder in `{lang}`, never the raw constant.
+    - When in doubt: would a non-technical end user of the product
+      understand this sentence WITHOUT opening the codebase? If no,
       rewrite.
 
-    Tech guides (`.tech.md`) are where constants, enum values, column names,
-    file paths and routes belong. That's their whole job — don't dilute them
-    by spilling tech detail into the product flavor.
+    Tech guides (`.tech.md`) are where constants, enum values, column
+    names, file paths and routes belong. That's their whole job — don't
+    dilute them by spilling tech detail into the product flavor. Tech
+    guides ALSO render their prose in `{lang}` (the user reading them
+    is the dev of the same product), but they keep code identifiers
+    untranslated.
 
 4. **Isolated context per draft.** In phase 4, each article gets its OWN focused
    sub-task. Don't try to draft 20 articles in one shot — quality collapses.
@@ -197,7 +210,8 @@ canonical entry sequence:
    in state. Both happen together, always.
 
 9. **User approves transitions.** Never silently jump from phase 4 to 5.
-   Always: *"Lote concluído. Avançar pra Pass 2 ou gerar mais artigos primeiro?"*
+   Always (rendered in `{lang}` from state.md):
+   *"Batch done. Move to Pass 2 or generate more articles first?"*
 
 10. **State is sacred.** Persist after every phase, every batch, every save.
     If the conversation crashes, the user re-invokes the skill and you read
@@ -234,9 +248,9 @@ canonical entry sequence:
 For each LLM call in phases 2/4/5/5.5/7, mentally estimate cost based on
 prompt size + expected output. Tell the user before expensive calls:
 
-> *"Vou rodar a Pass 2 em 4 artigos. Cada chamada lê o conteúdo dos artigos
-> e o índice dos demais — uso típico ~$0.05 por artigo. Custo estimado: $0.20.
-> OK?"*
+> *"I'm going to run Pass 2 on 4 articles. Each call reads the article
+> content plus the index of the others — typical usage ~$0.05 per article.
+> Estimated cost: $0.20. OK?"* (render in `{lang}`)
 
 In phase 4 (the expensive one), ALWAYS offer batch-by-capability instead of
 all-at-once.
@@ -295,13 +309,13 @@ make 2 calls than to time out and re-run.
 
 ## Quick reference card
 
-| Command (mental) | What you do |
+| User intent (any language equivalent) | What you do |
 |---|---|
-| "começar" / "iniciar" | Phase 0 → ask for guidance text via editor |
-| "continuar" | Read state, resume from current phase |
-| "qual a próxima fase?" | Tell user, don't auto-advance |
-| "voltar fase X" | Confirm, mark X as current in state, re-execute |
+| "start" / "begin" / "iniciar" / "começar" | Phase 0 → ask for guidance text via editor |
+| "continue" / "resume" / "continuar" | Read state, resume from current phase |
+| "what's the next phase?" | Tell user, don't auto-advance |
+| "go back to phase X" | Confirm, mark X as current in state, re-execute |
 | "status" | Summarize state.md in 5 lines |
-| "qual o custo até agora?" | Sum the cost annotations from state.md |
+| "what's the cost so far?" | Sum the cost annotations from state.md |
 
 Now load `references/phase-0-guidance.md` when the user is ready to begin.

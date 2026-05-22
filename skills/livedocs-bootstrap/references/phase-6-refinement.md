@@ -19,7 +19,7 @@ Same theme = same mental mode for the user, lower fatigue, faster pace.
 | **A** | **Product meaning / glossary** | "What does status X mean in business terms?" "Are 'commission' and 'payout' interchangeable in your vocabulary?" |
 | **B** | **Transitions and triggers** | "Who fires A → B? Cron? Webhook? Manual?" "What event causes the contract to leave `pending`?" |
 | **C** | **Invariants and constraints** | "Can two records of type X exist active at the same time?" "Is there a hard limit on the renegotiation chain?" |
-| **D** | **User experience and support** | "Top 3 dúvidas operators ask support about screen S?" "Does the operator understand this copy?" |
+| **D** | **User experience and support** | "Top 3 most common support questions about screen S?" "Does the operator understand this copy?" |
 | **E** | **Code-suggested edges** | "Code suggests X but doesn't confirm — is rollback transactional here?" "Race condition between two writers — intentional?" |
 | **F** | **Direction of the guide (meta)** | "Right depth?" "Anything obvious I missed?" "What guide next?" |
 
@@ -162,31 +162,35 @@ For N ≤ 50, inline chat interview is fine; skip the file export.
 
 #### Interview file template (per block)
 
-````markdown
-# Entrevista — Bloco {LETTER} — {BLOCK NAME}
+> The block file is rendered in `{lang}`. The skeleton below is shown in
+> English for illustration — translate every prose line, including the
+> "Resposta:" / "Answer:" marker word, while keeping the structure intact.
 
-**Data:** YYYY-MM-DD
-**Entrevistado:** {user name from state}
-**Entrevistador:** agente livedocs-bootstrap
+````markdown
+# Interview — Block {LETTER} — {BLOCK NAME in {lang}}
+
+**Date:** YYYY-MM-DD
+**Interviewee:** {user name from state}
+**Interviewer:** livedocs-bootstrap agent
 
 ## How to answer
 
-Answer below each question in **Resposta:** field. You can answer in
-prose, bullets, audio transcribed — whatever is practical. Skip with
-`/skip`, pause with `/pause`. Where I guessed, I marked 🟡 with what
-I assumed — just confirm/correct.
+Answer below each question in the **{Answer:}** field. You can answer
+in prose, bullets, transcribed audio — whatever is practical. Skip
+with `/skip`, pause with `/pause`. Where I guessed, I marked 🟡 with
+what I assumed — just confirm or correct.
 
 ---
 
-## {Block name}
+## {Block name in {lang}}
 
 ### {Q#} — origin: {capability/slug} — confidence: {high|low}
 
-{Question text}
+{Question text in {lang}}
 
-🟡 **My provisional answer:** {provisional_answer}
+🟡 **My provisional answer:** {provisional_answer in {lang}}
 
-**Resposta:**
+**{Answer:}**
 
 
 
@@ -195,103 +199,117 @@ I assumed — just confirm/correct.
 ### {Q#} — ...
 ````
 
+The literal word `Answer:` above is the **answer marker** the agent
+greps for when reading the file back. Translate it for the user but
+keep it consistent within a run (e.g. `Resposta:` in pt-BR — always the
+same word, never mixed). Record the chosen marker in state under
+`answer_marker:` so the import step in Step 7 knows what to grep.
+
 ### Step 5 — Always include Block F
 
-Block F is a fixed template appended after content blocks A–E:
+Block F is a fixed template appended after content blocks A–E
+(render in `{lang}`):
 
 ````markdown
-# Bloco F — Direção do guia (meta)
+# Block F — Direction of the guide (meta)
 
 These are about the guide, not about the system.
 
 **F1. Right depth?** Are the drafts too shallow, too deep, or right for
-this domain? Should we split into produto + tech more aggressively?
+this domain? Should we split into product + tech more aggressively?
 
-**Resposta:**
+**{Answer:}**
 
 ---
 
 **F2. Anything obvious I missed?** Is there something a maintainer of
 this product would consider essential that none of the drafts touch?
 
-**Resposta:**
+**{Answer:}**
 
 ---
 
 **F3. Next guide?** Now that this bootstrap is done, what should be the
 first guide we revisit or expand in maintenance mode?
 
-**Resposta:**
+**{Answer:}**
 
 ---
 
 **F4. Anything I should have asked but didn't?** Open mic.
 
-**Resposta:**
+**{Answer:}**
 ````
 
 ### Step 6 — Conduct the interview
 
 **Inline mode (chat, N ≤ 50):**
 
-For each canonical, in block order (A → F):
+For each canonical, in block order (A → F), render the turn in `{lang}`.
+The skeleton below is shown in English for illustration:
 
 ```
-Pergunta 5/23 — Bloco B (Transições) — origem: gestao-projetos/criar-projeto
+Question 5/23 — Block B (Transitions) — origin: project-management/create-project
 
-O agente perguntou:
-  "Quando você cria um projeto e ele entra na fase 'Negociação' do
-   Kanban, isso dispara alguma notificação automática?"
+The agent asks:
+  "When you create a project and it enters the 'Negotiation' Kanban
+   stage, does that trigger any automatic notification?"
 
-🟡 Suposição provisória (confiança: baixa):
-  "Não há notificação automática — membros vêem ao abrir o Kanban."
+🟡 Provisional answer (confidence: low):
+  "No automatic notification — members see it when opening the Kanban."
 
-Outras perguntas que esta também responde:
-  - Q12 (cobranca/emissao-boletos): "Mudanças de stage geram alerta?"
+Other questions this one also answers:
+  - Q12 (billing/invoice-issuance): "Do stage changes trigger alerts?"
 
-Sua resposta (ou /skip / /sair):
+Your answer (or /skip / /quit):
 >
 ```
 
 **File mode (N > 50):**
 
 Tell the user the files were created. Wait for them to say "done with
-block A" (or similar). Read the file, parse each `**Resposta:**`
-section, save to state. Repeat for each block.
+block A" (or similar). Read the file, parse each answer marker section
+(`Resposta:` / `Answer:` / whatever is recorded in state under
+`answer_marker:`), save to state. Repeat for each block.
 
 ### Step 7 — When user answers
 
-- Save to canonical: `status="answered"`, `answer="..."`.
+- Save to canonical: `status="answered"`, `answer="..."` (verbatim text
+  preserved, including language — see `language-handling.md`).
 - Propagate to merged questions: `status="answered"`, same answer.
 - **Re-evaluate other open questions**: an answer often resolves
   others. After each answer, scan remaining canonicals. If any is
-  clearly now resolved by the new answer, ask:
+  clearly now resolved by the new answer, ask (in `{lang}`, semantic
+  equivalent of):
   > "Your answer also seems to resolve Q12 ('Does stage change emit an
   > alert?'). OK to mark Q12 as answered with the same answer?"
 
 ### Step 8 — Pause / resume
 
+Slash commands stay as-is regardless of `{lang}` — they're parser tokens.
+The agent's surrounding chat lines render in `{lang}`.
+
 - `/skip` → leave question open, continue.
-- `/sair` or `/pause` → save state, exit gracefully:
-  > "Pausando refinamento. You answered 8/23 questions. To continue,
+- `/quit` or `/pause` → save state, exit gracefully (message in `{lang}`):
+  > "Pausing refinement. You answered 8/23 questions. To continue,
   > re-invoke the skill — I'll resume from here."
-- `/abort` → save state with a `paused_at` timestamp, mark `interview_status:
-  paused`. On resume, skip already-answered questions.
+- `/abort` → save state with a `paused_at` timestamp, mark
+  `interview_status: paused`. On resume, skip already-answered questions.
 
 ### Step 9 — End of interview
 
-Save state, summarize:
+Save state, summarize (render in `{lang}`; English skeleton shown):
 
 ```
 ✓ Refinement complete — 18/23 answered, 5 skipped.
 
   By block:
-    A (significado): 4/4
-    B (transições): 5/6
-    C (invariantes): 3/4
-    D (ux/suporte): 2/4
-    E (bordas):     2/3
-    F (direção):    2/2
+    A (meaning):    4/4
+    B (transitions): 5/6
+    C (invariants): 3/4
+    D (UX/support): 2/4
+    E (edges):      2/3
+    F (direction):  2/2
 
 Next phase: Global Update — affected articles will be reopened and the
 answers incorporated. Estimate: ~M affected articles, cost ~$X.
@@ -303,9 +321,9 @@ Proceed?
 
 ## Pitfalls
 
-- **User answers vague ("não sei", "depende")**: that's a real answer.
-  Save it; Phase 7 will write it as a documented uncertainty in the
-  guide.
+- **User answers vague (equivalent of "I don't know" / "depends")**:
+  that's a real answer. Save it; Phase 7 will write it as a documented
+  uncertainty in the guide.
 - **User answers a 5-paragraph essay**: accept all. Save full text. Phase
   7 will distill what's relevant per affected article.
 - **Question has no clear origin guide**: dedup might lose it. Fallback:

@@ -8,17 +8,18 @@ quickly capture them later.
 ## Format inside the .md (product flavor only)
 
 Inserted immediately AFTER the paragraph mentioning the screen, in an
-admonition block:
+admonition block. The example below is illustrative — the surrounding
+prose and the field labels (`Route:`, `Description:`, etc.) render in
+`{lang}`. The admonition token `[!TODO:screenshot]` stays as-is —
+it's a parser token, not prose.
 
 ```markdown
-Para começar, acesse o **Pipeline de pré-projetos** (`/pre-projects`).
-Ali você consegue ver todos os projetos em andamento, organizados em
-colunas como "Negociação", "Aprovado", "Em implantação".
+<prose paragraph that mentions a UI surface, in {lang}>
 
 > [!TODO:screenshot]
-> Rota: `/pre-projects`
-> Descrição: Vista do quadro Kanban completo, com pelo menos 3 colunas
-> e 5+ cards distribuídos para ilustrar o uso normal.
+> Route: `/pre-projects`
+> Description: Full Kanban board view, with at least 3 columns and 5+
+> cards spread across them to illustrate normal usage.
 ```
 
 ## Format in state.md
@@ -28,9 +29,12 @@ Each TODO is also registered in state for programmatic listing:
 ```markdown
 ## Screenshot TODOs (open: 12)
 
-- [open] `gestao-projetos/visao-geral.md` — `/projects` — "Kanban view"
-- [open] `gestao-projetos/criar-projeto.md` — `/projects/new` — "Wizard step 1"
+- [open] `project-management/overview.md` — `/projects` — "Kanban view"
+- [open] `project-management/create-project.md` — `/projects/new` — "Wizard step 1"
 ```
+
+The `[open]` / `[captured]` / `[dropped]` status tokens stay in English
+(they are state contracts). The trailing description is in `{lang}`.
 
 ## Rules
 
@@ -46,33 +50,34 @@ Each TODO is also registered in state for programmatic listing:
    Specifically, ALWAYS write a TODO when the prose mentions:
    - a concrete route (`/path`)
    - a sidebar, panel, drawer, modal, dialog, or tab
-   - a button or action with a name (e.g. "botão Salvar splits")
+   - a button or action with a name (in `{lang}`)
    - a list, grid, kanban column, or chart
    - an empty state, success state, or error state worth showing
    - a step inside a wizard or multi-step flow
    - a settings section reachable from a named menu item
 
 3. **Identify the surface as precisely as you can.** A route is best, but a
-   named surface inside a route is also fine. Use the `Local:` field for
-   non-route surfaces:
+   named surface inside a route is also fine. Use the `Location:` field
+   (rendered in `{lang}`) for non-route surfaces:
 
    ```markdown
    > [!TODO:screenshot]
-   > Local: barra lateral do projeto → seção "Parceiros e splits"
-   > Rota base: `/project/:project`
-   > Descrição: <what this surface shows>
+   > Location: project sidebar → "Partners and splits" section
+   > Base route: `/project/:project`
+   > Description: <what this surface shows, in {lang}>
    ```
 
-   Only OMIT the TODO when you genuinely don't know where the surface lives
-   (e.g. "em algum lugar das configurações" with no anchor at all). In that
+   Only OMIT the TODO when you genuinely don't know where the surface
+   lives (e.g. "somewhere in settings" with no anchor at all). In that
    case, register a pending question instead asking the user where it is.
 
 4. **`.md` only, never `.tech.md`.** Product guides need screenshots;
    tech guides have file:line references instead.
 
-5. **Description guides the capturer.** Don't write "tela do dashboard" —
-   write "Dashboard logo após login, com pelo menos 1 projeto cadastrado
-   e 3 tarefas pendentes". The more context, the better the screenshot.
+5. **Description guides the capturer.** Don't write something as vague
+   as "the dashboard screen" — write "Dashboard right after login, with
+   at least 1 project registered and 3 pending tasks". The more context,
+   the better the screenshot.
 
 6. **Status field stays simple:** `open` (default) | `captured` | `dropped`.
    Captured = human attached image. Dropped = route no longer relevant.
@@ -93,8 +98,8 @@ b) Save the image at `.livedocs/screenshots/<cap-slug>/<article-slug>__<num>.png
 DON'T write:
 ```markdown
 > [!TODO:screenshot]
-> Rota: (a página de configuração)
-> Descrição: (uma tela bonita do produto)
+> Route: (the settings page)
+> Description: (a nice screen of the product)
 ```
 
 That's noise. Either you have a concrete route → write it precisely; OR

@@ -4,56 +4,65 @@
 Let the user edit the proposed taxonomy until they're happy with it. This is
 conversational — you propose, they react, you patch the JSON.
 
+All chat strings shown below are illustrative (in English). Render them
+in `{lang}` when speaking to the user.
+
 ## What to do
 
-1. **Show the current state** of `.livedocs/taxonomy.json` as a menu:
+1. **Show the current state** of `.livedocs/taxonomy.json` as a menu
+   (illustrative; render in `{lang}`):
 
    ```
-   Taxonomia atual — 18 capacidades, 5 jornadas
+   Current taxonomy — 18 capabilities, 5 journeys
 
-   CAPACIDADES
-     1. cobranca-recorrente   (1 artigo)
-     2. onboarding-morador    (1 artigo)
+   CAPABILITIES
+     1. recurring-billing   (1 article)
+     2. resident-onboarding (1 article)
      ...
 
-   JORNADAS
-     J1. primeira-fatura
+   JOURNEYS
+     J1. first-invoice
      ...
 
-   Ações disponíveis:
-     [i] inspecionar capacidade N — mostra rotas, models, arquivos da capacidade
-     [s] split capacidade N — IA propõe N artigos (custo ~$0.05)
-     [A] gerenciar artigos da capacidade N — editar manualmente
-     [r] renomear capacidade N
-     [m] mesclar capacidades N+M
-     [x] remover capacidade N
-     [+] adicionar capacidade
-     [J] gerenciar jornadas (analogamente)
-     [a] aprovar e avançar pra Phase 4
-     [q] sair (salva estado)
+   Available actions:
+     [i] inspect capability N — show routes, models, files in scope
+     [s] split capability N — AI proposes N articles (cost ~$0.05)
+     [A] manage articles of capability N — edit manually
+     [r] rename capability N
+     [m] merge capabilities N+M
+     [x] remove capability N
+     [+] add capability
+     [J] manage journeys (analogous)
+     [a] approve and advance to Phase 4
+     [q] quit (saves state)
 
-   O que você quer fazer?
+   What do you want to do?
    ```
+
+   When rendering the labels, translate to `{lang}` but **keep the
+   bracketed letter shortcuts** (`[i]`, `[s]`, `[a]`, etc.) — those
+   are the input contract, not prose.
 
 2. **Wait for user choice.** Execute the action and re-render the menu.
    Loop until user picks `[a]` or `[q]`.
 
 ### Action: inspect (`[i]`)
 
-Filter routes/models from the cache by the capability's `code_anchors`:
+Filter routes/models from the cache by the capability's `code_anchors`.
+Output illustrative; render in `{lang}`:
 
 ```
-gestao-projetos — "Gestão de Projetos de REURB"
+project-management — "<title>"
   code_anchors:
-    - src/projects/** (87 arquivos)
-    - src/views/Projects/** (23 arquivos)
-  Rotas dentro:
-    /projects                    (lista/kanban)
+    - src/projects/** (87 files)
+    - src/views/Projects/** (23 files)
+  Routes inside:
+    /projects                    (list/kanban)
     /projects/new
     /projects/:id
     /projects/:id/financial
     /projects/:id/team
-  Models tocados: Project, ProjectMember, ProjectConfig, ProjectStage
+  Models touched: Project, ProjectMember, ProjectConfig, ProjectStage
 ```
 
 Zero LLM. Pure filtering.
@@ -62,35 +71,39 @@ Zero LLM. Pure filtering.
 
 This IS an LLM call. Estimate cost: ~$0.05 per split. Confirm before running.
 
-Prompt:
-> Para a capacidade "gestao-projetos" cujos anchors são `src/projects/**`,
-> proponha 2-7 articles que representem sub-áreas/sub-fluxos dentro dela.
->
-> Rotas dentro: <filtered routes>
-> Models tocados: <filtered models>
-> Guidance: <user guidance>
->
-> Cada article: slug kebab-case, title, summary (1 linha), is_intro
-> (exatamente 0 ou 1 com true). code_anchors do artigo devem ser refinamento
-> dos anchors da capability pai.
->
-> Output JSON estrito: {"articles": [{...}]}
+Prompt to the sub-agent:
 
-Show the proposal, sub-menu:
+> For the capability `{capability_slug}` whose anchors are `{anchors}`,
+> propose 2–7 articles representing sub-areas / sub-flows.
+>
+> Routes inside: <filtered routes>
+> Models touched: <filtered models>
+> User guidance: <user guidance>
+> Output language: `{lang}` (titles, summaries; slugs in kebab-case
+> ASCII fold of `{lang}` words).
+>
+> Each article: slug (kebab-case), title, summary (1 line), is_intro
+> (exactly 0 or 1 set to true). code_anchors of the article must be a
+> refinement of the parent capability's anchors.
+>
+> Output strict JSON: {"articles": [{...}]}
+
+Show the proposal, sub-menu (illustrative; in `{lang}`):
 ```
-[a]ceitar  [r]enomear N  [+]adicionar  [x]remover N  [c]ancelar
+[a]ccept  [r]ename N  [+]add  [x]remove N  [c]ancel
 ```
 
 If accepted, replace `capability.articles` with the new list. Save.
 
 ### Action: manage articles (`[A]`)
 
-Sub-loop. Zero LLM. Renomear / remover (manter ≥1) / adicionar / mover âncoras / toggle is_intro / voltar.
+Sub-loop. Zero LLM. Rename / remove (keep ≥1) / add / move anchors /
+toggle `is_intro` / back.
 
 ### Action: rename / merge / remove / add
 
-Straightforward edits to `.livedocs/taxonomy.json`. After each edit, re-render
-the top menu.
+Straightforward edits to `.livedocs/taxonomy.json`. After each edit,
+re-render the top menu.
 
 When merging A into B:
 - Concatenate code_anchors (dedup)
@@ -102,14 +115,14 @@ When merging A into B:
 Set `approved_at` to current ISO timestamp in `.livedocs/taxonomy.json`.
 Update state.md to mark phase 3 done.
 
-Show summary:
+Show summary (illustrative; render in `{lang}`):
 ```
-✓ Taxonomia aprovada: 22 capacidades, 5 jornadas
-Total de artigos a gerar na Phase 4: 67
+✓ Taxonomy approved: 22 capabilities, 5 journeys
+Total articles to generate in Phase 4: 67
 
-Custo estimado da Phase 4 (passada 1):
-  - ~$0.30 por artigo × 67 = $20 (variação ~$10-30)
-  - Pode rodar em lotes — veja menu da Phase 4
+Estimated Phase 4 cost (pass 1):
+  - $0.30–$1.00 per article × 67 = $20–$67 (varies with capability size)
+  - Can run in batches — see Phase 4 menu
 ```
 
 Ask consent to advance to Phase 4.

@@ -1,68 +1,120 @@
 # Phase 0 — Guidance
 
 ## Goal
-Collect free-form context from the maintainer about the product: who they are,
-what the system does, what it's for, references, hints. This text feeds every
-later LLM call so it MUST be captured carefully.
+Establish two things before any other work happens:
+
+1. **Language** — what language the entire run will use (skill messages,
+   interview, generated docs). See `references/language-handling.md`.
+2. **Guidance** — free-form context from the maintainer about the product:
+   who they are, what the system does, what it's for, references, hints.
+   This text feeds every later LLM call so it MUST be captured carefully.
 
 ## What to do
 
-1. **Open the conversation with this exact intro** (or the user's language equivalent):
+### Step 1 — Decide and confirm the run language
 
-   > Antes de começar, conta um pouco sobre o contexto:
-   >
-   > Quem é você, o que o sistema faz, para que serve. Pode colar
-   > referências, instruções gerais ou qualquer coisa que ajude a IA
-   > durante a documentação.
-   >
-   > **Como entregar:**
-   > - Cole aqui no chat (multi-linha está OK), OU
-   > - Edite `.livedocs/guidance.md` e me avise quando salvar.
-   >
-   > Texto vazio também é aceitável — só vai depender mais do código.
+Detect a candidate language by inspecting the codebase. Heuristics
+(use as many as available, weight by signal strength):
 
-2. **Wait for the user's response.** Don't proceed without one of:
-   - Text in the chat (multi-paragraph OK)
-   - User says "criei o arquivo" / "salvei em .livedocs/guidance.md"
-   - User explicitly says "sem guidance" / "vazio"
+- **i18n keys** in the codebase — if `t('...')` calls dominantly resolve
+  to one language file (e.g. `locales/pt-BR.json` has many keys and is
+  the default), use that.
+- **Comments and identifiers** — read 5–10 random source files; if
+  variable names, comments, and inline strings are in one natural
+  language, weight it.
+- **README and package metadata** — `README.md` headline + package
+  description.
+- **Existing docs/** — if any prior documentation exists, look at it.
 
-3. **Persist the guidance to disk.** Always write `.livedocs/guidance.md`
-   with the captured text (or empty file marker if none). This is the source
-   of truth for later phases.
+Pick the strongest candidate. If signals are mixed or absent, default
+to **English**.
 
-   ```bash
-   mkdir -p .livedocs
-   cat > .livedocs/guidance.md <<'EOF'
-   <USER TEXT HERE>
-   EOF
-   ```
+Ask the user (rendered in **the language you detected** for friendliness;
+if you detected English, ask in English; etc.):
 
-4. **Initialize state.md if it doesn't exist.** Use the template from
-   `references/state-format.md`. Mark phase 0 as "completed", set "Current
-   phase" to "1 (scan)".
+> I'll run the bootstrap in {detected-lang}. That means:
+> - The questions I'll ask you during the interview will be in {detected-lang}.
+> - The generated `.md` and `.tech.md` files will be in {detected-lang}.
+> - The state file (`.livedocs/state.md`) will be in {detected-lang}.
+>
+> Confirm, or tell me which language to use instead (use BCP-47 codes
+> like `pt-BR`, `en`, `es-AR`).
 
-5. **Ask consent to advance:**
+Persist the chosen language in `.livedocs/state.md` as the `Lang:` field
+(see `references/state-format.md`). From here on, treat this language
+as `{lang}` everywhere.
 
-   > Guidance capturada. Próxima fase é o **scan** do código:
-   > - Roda `graphify extract` se disponível (gera grafo semântico, usa LLM)
-   > - Lê rotas, i18n e models do código
-   > - Não chama LLM diretamente nesta fase (graphify usa, mas é orquestrado por ele)
-   >
-   > Posso seguir?
+### Step 2 — Ask for product context (guidance)
+
+Render the following prompt in `{lang}` — translate naturally, don't
+copy-paste English to a pt-BR user:
+
+> Before we start, tell me a bit about the context:
+>
+> Who you are, what the system does, what it's for. You can paste
+> references, general instructions, or anything that helps the AI
+> during documentation.
+>
+> **How to deliver:**
+> - Paste it here in the chat (multi-line is OK), OR
+> - Edit `.livedocs/guidance.md` and tell me when you've saved.
+>
+> Empty text is also acceptable — the run will rely more on code reading.
+
+### Step 3 — Wait for the user's response
+
+Don't proceed without one of:
+- Text in the chat (multi-paragraph OK)
+- User says they created/saved the guidance file
+- User explicitly says "no guidance" / "empty"
+
+### Step 4 — Persist guidance to disk
+
+Always write `.livedocs/guidance.md` with the captured text (or an
+empty-file marker if none). This is the source of truth for later phases.
+
+```bash
+mkdir -p .livedocs
+cat > .livedocs/guidance.md <<'EOF'
+<USER TEXT HERE>
+EOF
+```
+
+### Step 5 — Initialize state.md if it doesn't exist
+
+Use the template from `references/state-format.md`. Mark phase 0 as
+"completed", set "Current phase" to "1 (scan)", record the chosen
+`Lang:`.
+
+### Step 6 — Ask consent to advance (render in {lang})
+
+> Guidance captured. Next phase is the code **scan**:
+> - Runs `graphify extract` if available (semantic graph, uses LLM)
+> - Reads routes, i18n keys, and models from the code
+> - Doesn't call the LLM directly (graphify does, but it's its own thing)
+>
+> Can I proceed?
 
 ## Validation
 
 Before leaving phase 0, confirm:
+- `Lang:` recorded in `.livedocs/state.md`
 - `.livedocs/guidance.md` exists on disk
 - `.livedocs/state.md` exists and lists phase 0 as completed
 - User explicitly OK'd advancing to phase 1
 
 ## Edge cases
 
-- **User pastes a 10k-char manifesto**: accept it, warn that very long
+- **User pastes a 10k-char manifesto**: accept it; warn that very long
   guidance increases per-call cost. Don't truncate.
-- **User can't articulate**: offer prompts: *"Você prefere que eu pergunte
-  por partes? Posso fazer 3-4 perguntas curtas."*
-- **User says "lê meu README"**: read it, summarize in 5-10 lines, ask
-  *"Confirma esse resumo? Quer adicionar algo?"*. The CONFIRMED summary
-  becomes the guidance — not the raw README.
+- **User can't articulate**: offer to ask 3-4 short questions instead.
+- **User says "read my README"**: read it, summarize in 5-10 lines,
+  ask them to confirm or amend. The CONFIRMED summary becomes the
+  guidance — not the raw README.
+- **User wants two languages** (e.g. interview in English but docs in
+  pt-BR): NOT supported today. Explain the constraint (single source of
+  truth, translation as a later phase). Recommend picking the language
+  the final product speaks. See `references/language-handling.md`.
+- **Mixed-language codebase** (e.g. backend in English, UI in pt-BR):
+  the choice is the language of the **product**, not the code. UI
+  language wins because that's what the docs reflect.

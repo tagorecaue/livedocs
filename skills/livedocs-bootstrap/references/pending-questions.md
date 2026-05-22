@@ -13,8 +13,8 @@ the ones the agent could have answered by reading the code harder.**
 >
 > Existence and value live in the code — go read it.
 > Intent ("why was this designed this way?") and experience
-> ("what dúvidas does support actually receive?") only live in the
-> user's head. Those are the questions worth asking.
+> ("what support questions does the team actually receive?") only live
+> in the user's head. Those are the questions worth asking.
 
 If you find yourself about to ask "what is the value of X?" or
 "does Y exist?", stop and look at the code.
@@ -57,7 +57,7 @@ These genuinely require the human. Register confidently.
 |---|---|
 | "Why was the system designed to do A instead of B?" | Intent — product decision |
 | "Which path through this flow is more common in practice — X or Y?" | Operational reality |
-| "When operators ask support about screen S, what are the top 3 dúvidas?" | Tribal support knowledge |
+| "When operators ask support about screen S, what are the top 3 most common questions?" | Tribal support knowledge |
 | "Is feature F still used, or is it dead code that nobody removed?" | Roadmap / usage knowledge |
 | "Two parallel cron jobs touch the same table — is the lack of locking intentional or accidental?" | Risk tolerance / product call |
 | "External API X returns code 429 — what's the desired UX?" | Product decision on failure modes |

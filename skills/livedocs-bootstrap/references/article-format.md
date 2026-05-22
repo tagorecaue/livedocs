@@ -2,6 +2,11 @@
 
 Every article (.md and .tech.md) MUST have this structure.
 
+> All prose section names, headings, and body text rendered to disk are
+> in `{lang}` (the language locked in Phase 0). The English names used
+> in this reference describe the SEMANTIC sections — the sub-agent
+> translates them to `{lang}` when writing the file.
+
 ## Front-matter
 
 ```yaml
@@ -9,9 +14,9 @@ Every article (.md and .tech.md) MUST have this structure.
 slug: <cap-slug>/<article-slug>     # for capability articles
 # or
 slug: <journey-slug>                 # for journey articles
-title: <Human readable title>
+title: <Human readable title in {lang}>
 kind: capability                     # or "journey"
-flavor: produto                      # or "tecnico"
+flavor: product                      # or "tech"  (use these English values verbatim)
 status: drafted                      # drafted | stitched | refined
 generated_at: "2026-05-21"
 last_interview: ""                   # ISO date of last user answer affecting this guide
@@ -23,53 +28,61 @@ related_guides:                      # added during phase 5
 ---
 ```
 
+Front-matter KEYS stay in English (skill contract). VALUES like `title`
+are in `{lang}`. The `flavor` value is one of the fixed strings
+`product` | `tech` — those are enum-like skill tokens, not prose.
+
 ## Sections — product flavor (`.md`)
 
-In this order, no skipping:
+In this order, no skipping. Section names below are SEMANTIC labels —
+the sub-agent renders the actual heading in `{lang}`:
 
 1. **# {title}** (h1)
-2. **Por que isso existe** — why this capability/article matters to the user
-3. **Como o usuário vivencia** — user-facing flow, what they see/click/feel
-4. **Conceitos-chave** — domain terms with definitions
-5. **Fluxos principais** — main flows (mermaid OK if non-trivial)
-6. **Casos do dia a dia** — Q&A format: "E se eu...?"
-7. **Convivência com vizinhos** — interactions with other capabilities
-8. **Veja também** — cross-links to 3-5 related guides (PHASE 5 fills this)
+2. **Why this exists** — why this capability/article matters to the user
+3. **How the user experiences it** — user-facing flow, what they see / click / feel
+4. **Key concepts** — domain terms with definitions
+5. **Main flows** — main flows (mermaid OK if non-trivial)
+6. **Day-to-day cases** — Q&A format: "What if I…?"
+7. **Living with neighbors** — interactions with other capabilities
+8. **See also** — cross-links to 3-5 related guides (PHASE 5 fills this)
 
 **Zero technical jargon.** No column names, no function names, no
-`UPPER_SNAKE_CASE`, no DB enum values (`before_tax`, `REURB_S`, etc.), no
-route paths inline, no English terms when the product UI is in another
-language. When a constant appears in code, find the user-visible label
-(templates, `:items=`, `text:`, computed getters, formatters) and use THAT.
-If the label can't be found, register a pending question — never leak the
-raw constant. Self-check: would a non-technical user (gestor, operador,
-morador) understand each sentence without opening the codebase? The voice
-is the one from `.livedocs/style.md` (or default: "tutorial conversacional,
-pt-BR, segunda pessoa").
+`UPPER_SNAKE_CASE`, no DB enum values, no route paths inline, no
+foreign-language terms (anything outside `{lang}`). When a constant
+appears in code, find the user-visible label (templates, `:items=`,
+`text:`, computed getters, formatters) and use THAT. If the label can't
+be found, register a pending question — never leak the raw constant.
 
-Tech detail belongs in `.tech.md`, NOT here. That separation is the whole
-point of the two flavors.
+Self-check: would a non-technical end user of the product understand
+each sentence without opening the codebase? The voice is the one from
+`.livedocs/style.md` if it exists; otherwise default to "conversational
+tutorial, second person, in `{lang}`".
+
+Tech detail belongs in `.tech.md`, NOT here. That separation is the
+whole point of the two flavors.
 
 ## Sections — technical flavor (`.tech.md`)
 
-1. **# {title} (técnico)** (h1)
-2. **Modelo de dados** — ORM models touched, key fields
-3. **Pontos de entrada** — hooks, endpoints, services, routes with file:line
-4. **Diagrama de transições** (if state machines involved) — mermaid
-5. **Regras invariantes** — numbered (R1, R2, R3) with `file:line`
-6. **UI / cores / selos** — only when visual design matters semantically
-7. **Pendências e melhorias mapeadas** — 🟡 hypotheses, missing tests, refactor opportunities
-8. **Material de referência** — links to repos, docs, ADRs
-9. **Veja também** — cross-links to related tech guides (PHASE 5 fills this)
+Prose in `{lang}`; identifiers, file:line refs, code blocks unchanged.
+
+1. **# {title} (technical)** (h1) — render the parenthetical in `{lang}` too
+2. **Data model** — ORM models touched, key fields
+3. **Entry points** — hooks, endpoints, services, routes with file:line
+4. **Transition diagram** (if state machines involved) — mermaid
+5. **Invariant rules** — numbered (R1, R2, R3) with `file:line`
+6. **UI / colors / badges** — only when visual design matters semantically
+7. **Pending items and known gaps** — 🟡 hypotheses, missing tests, refactor opportunities
+8. **Reference material** — links to repos, docs, ADRs
+9. **See also** — cross-links to related tech guides (PHASE 5 fills this)
 
 Use `file:line` or `file:line-line` citations liberally. Every numbered
 invariant rule should cite its source.
 
 ## Mermaid usage
 
-Allowed in both flavors but **sparingly**. Rule of thumb: include a diagram
-ONLY when prose would take >2 paragraphs to explain what the diagram shows
-in one glance.
+Allowed in both flavors but **sparingly**. Rule of thumb: include a
+diagram ONLY when prose would take >2 paragraphs to explain what the
+diagram shows in one glance.
 
 Common mermaid types used:
 - `flowchart` for workflows
@@ -77,21 +90,24 @@ Common mermaid types used:
 - `sequenceDiagram` for integrations / API calls
 - `erDiagram` for data models (in tech flavor only)
 
+Mermaid labels (node text, edge labels) are user-visible prose — render
+in `{lang}`. Node IDs are opaque.
+
 ## Pair rules
 
 - `.md` and `.tech.md` MUST share the same slug.
 - They live in the same directory.
-- They NEVER link directly to each other. Knowledge crosses by structure,
-  not by hyperlink.
+- They NEVER link directly to each other. Knowledge crosses by
+  structure, not by hyperlink.
 - Cross-links go to OTHER guides of the SAME flavor.
 
 ## Tone
 
 Product flavor:
-- Second person ("você", "you").
+- Second person (the `{lang}` equivalent of "you").
 - Patient teacher tone, no condescension.
 - Light humor OK when natural.
-- Anticipate confusion: "Se você ainda não tem certeza..."
+- Anticipate confusion: lead with "If you're not sure yet, …"
 
 Tech flavor:
 - Third person, direct.

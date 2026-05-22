@@ -7,9 +7,9 @@ removing provisional answers and updating sections that depended on them.
 
 ## What to do
 
-> **DELEGATION**: cada guia afetado vira uma sub-task. Sub-agent recebe o
-> conteúdo atual + Q&A relevantes, reescreve via Write, retorna só o JSON
-> summary. Você (orquestrador) atualiza state.md.
+> **DELEGATION**: each affected guide is a sub-task. Sub-agent receives
+> current content + relevant Q&A, rewrites via Write, returns only the
+> JSON summary. You (orchestrator) update state.md.
 
 1. **Identify affected guides:** group answered questions by their origin
    guide (or guides — some questions originated from multiple). Result:
@@ -19,6 +19,11 @@ removing provisional answers and updating sections that depended on them.
 
    ```
    # Task: incorporate maintainer answers into this guide
+
+   ## Run language
+   `{lang}` (from state.md). All user-visible prose you write or rewrite
+   stays in `{lang}`. The Q&A pairs below are in `{lang}` (the user
+   answered in it) — preserve their wording where natural.
 
    ## Current guide content (product)
    ---
@@ -31,25 +36,26 @@ removing provisional answers and updating sections that depended on them.
    ---
 
    ## Maintainer answers to incorporate
-   <list of Q&A pairs relevant to this guide>
-
-   Q5. "Quando você cria um projeto e ele entra na fase 'Negociação', isso
-        dispara alguma notificação automática?"
-   A5. "Não. A notificação automática só dispara quando o stage muda PARA
-        'Em Atendimento'. Negociação é só observado no Kanban."
+   <list of Q&A pairs relevant to this guide, in `{lang}`>
 
    ## Rules
 
-   1. Replace provisional/inferred content with the confirmed answer.
-   2. Remove 🟡 markers and "Pendências e melhorias mapeadas" entries that
-      now have answers.
-   3. Don't change unrelated content. Don't re-stitch links (that's Phase 5's job).
-   4. Update both `.md` (product flavor) and `.tech.md` (with code refs if relevant).
-   5. If an answer REVEALS new code references (e.g., user mentions a job
-      class name), add them to the tech guide's "Modelo de dados" /
-      "Pontos de entrada" section.
-   6. If an answer CONTRADICTS what the guide says, rewrite the contradicted
-      passage, do NOT just delete it.
+   1. Replace provisional / inferred content with the confirmed answer.
+   2. Remove 🟡 markers and "Pending items and known gaps" entries
+      that now have answers.
+   3. Don't change unrelated content. Don't re-stitch links (that's
+      Phase 5's job).
+   4. Update both `.md` (product flavor) and `.tech.md` (with code
+      refs if relevant).
+   5. If an answer REVEALS new code references (e.g. user mentions a
+      job class name), add them to the tech guide's "Data model" /
+      "Entry points" section.
+   6. If an answer CONTRADICTS what the guide says, rewrite the
+      contradicted passage; do NOT just delete it.
+   7. Verification: after writing each file, run `wc -c` (must be > 0)
+      and grep for a sentinel to confirm the content survived. Set
+      `verification_passed: true|false` in the JSON return. See core
+      principle 12.
 
    ## Output
 
@@ -57,16 +63,17 @@ removing provisional answers and updating sections that depended on them.
 
    ```json
    {
-     "files_modified": ["docs/.../slug.md", "docs/.../slug.tech.md"],
-     "changes_summary": "Substituiu hipótese sobre notificação por mecânica real do stage 'Em Atendimento'. Adicionou referência ao job NotifyStageChange em :42."
+     "files_modified": ["docs/<...>/slug.md", "docs/<...>/slug.tech.md"],
+     "changes_summary": "<one-paragraph summary in {lang} of what changed and why>",
+     "verification_passed": true
    }
    ```
    ```
 
-3. **For each affected guide, run the call.** Print progress:
+3. **For each affected guide, run the call.** Print progress in `{lang}`:
    ```
-   [3/9] atualizando: gestao-projetos/criar-projeto…
-   [3/9] gestao-projetos/criar-projeto: ✓ 22s · $0.04 (Substituiu hipótese de notificação por mecânica real)
+   [3/9] updating: project-management/create-project…
+   [3/9] project-management/create-project: ✓ 22s · $0.04 (<summary>)
    ```
 
 4. **After all affected guides updated:**
@@ -74,25 +81,25 @@ removing provisional answers and updating sections that depended on them.
    - mark answered questions `status="resolved"`
    - update state.md with the final summary
 
-5. **Final celebration message:**
+5. **Final celebration message** (render in `{lang}`; English skeleton):
    ```
-   ✓ Bootstrap completo!
+   ✓ Bootstrap complete!
 
-   Resumo:
-     - 67 artigos gerados em docs/
-     - 18 capacidades + 5 jornadas
-     - 47 perguntas pendentes (18 respondidas, 5 abertas, 24 dedup'd)
-     - 9 artigos refinados após respostas
-     - 23 screenshot TODOs registrados — abra .livedocs/screenshots.md
-       pra ver a lista e capturar manualmente
-     - Custo total: $23.40
+   Summary:
+     - 67 articles generated in docs/
+     - 18 capabilities + 5 journeys
+     - 47 pending questions (18 answered, 5 left open, 24 deduped)
+     - 9 articles refined after answers
+     - 23 screenshot TODOs registered — open `.livedocs/screenshots.md`
+       to see the list and capture them manually
+     - Total cost: $23.40
 
-   Próximos passos sugeridos:
-     - Revisar os artigos em docs/ no seu editor
-     - Tirar os screenshots (lista em .livedocs/screenshots.md)
-     - Publicar no help center (próxima feature da skill)
-     - Pra atualizar quando o código mudar: re-invoque esta skill,
-       vai detectar mudanças e propor ajustes
+   Suggested next steps:
+     - Review the articles in `docs/` in your editor
+     - Capture the screenshots (list at `.livedocs/screenshots.md`)
+     - Publish to the help center (future skill feature)
+     - To update when the code changes: re-invoke this skill — it'll
+       detect changes and propose adjustments (future skill feature)
    ```
 
 ## Pitfalls

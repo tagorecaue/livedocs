@@ -28,27 +28,27 @@ the user evaluate quality and budget.
 > This is what makes the skill scalable. 67 articles is doable; 67
 > articles in your main context is not.
 
-1. **Open the batch selector:**
+1. **Open the batch selector** (render in `{lang}`):
 
    ```
-   Pass 1 — gerar rascunhos
+   Pass 1 — generate drafts
 
-   Pendentes: 66 artigos (17 capacidades, 5 jornadas)
-   Já prontos: 1 artigo
+   Pending: 66 articles (17 capabilities, 5 journeys)
+   Already drafted: 1 article
 
-   Opções:
-     [1] Gerar tudo o que falta (66 artigos, ~$20)
-     [2] Escolher capacidades (multi-seleção)
-     [3] Só jornadas (5 artigos)
-     [4] Sair e continuar depois
+   Options:
+     [1] Generate everything pending (66 articles, ~$20–$67)
+     [2] Pick capabilities (multi-select)
+     [3] Journeys only (5 articles)
+     [4] Quit and continue later
 
-   O que você prefere?
+   What do you prefer?
    ```
 
 2. **Wait for the user's choice.** Compute the target list:
-   - "tudo" → todos articles + journeys with status≠drafted
-   - "escolher" → asks which capability slugs (multi-select)
-   - "só jornadas" → only the journeys
+   - "all" → all articles + journeys with status ≠ drafted
+   - "pick" → asks which capability slugs (multi-select)
+   - "journeys only" → only the journeys
 
 3. **For each target article, generate independently.** This is the part that
    benefits from sub-agents / parallel tool calls if your platform supports
@@ -80,7 +80,9 @@ the user evaluate quality and budget.
    <full guidance.md content>
 
    ## Style (target voice)
-   <contents of .livedocs/style.md if it exists, else: "tutorial conversacional, pt-BR, sem jargão técnico no .md de produto">
+   <contents of .livedocs/style.md if it exists, else: "conversational
+   tutorial in `{lang}`, second person, no technical jargon in the
+   product `.md`">
 
    ## Rules
 
@@ -88,6 +90,10 @@ the user evaluate quality and budget.
    - When you want to reference another guide, write `[TODO:link={slug}]`. Phase 5 resolves.
    - When the code doesn't reveal intent/UX/integration, register a pending question — don't invent.
    - Each pending question: { question, provisional_answer (your best guess from code), confidence (low/high) }.
+   - **Language**: produce ALL user-visible prose in `{lang}` (the run
+     language locked in Phase 0, available in `state.md` as `Lang:`).
+     This covers article body, pending question text, and screenshot
+     description text. Identifiers, file:line refs, JSON keys stay as-is.
 
    ### Pending questions — bar for registering
 
@@ -112,7 +118,7 @@ the user evaluate quality and budget.
 
    ✅ DO register questions like:
    - "Why was this designed to do A instead of B?"
-   - "Top 3 dúvidas support actually gets about this screen?"
+   - "What are the top 3 most common support questions about this screen?"
    - "Is feature F still used or dead code nobody removed?"
    - "When entity A is transferred, what happens to scheduled job J?"
    - "Race condition between two writers — intentional or risk?"
@@ -124,24 +130,27 @@ the user evaluate quality and budget.
 
    ### UI language (HARD RULE — applies to the product `.md` only)
 
-   - Write in the SAME language the product UI uses. Default for this repo: pt-BR.
-   - NEVER paste a foreign-language word, a DB enum value, a code constant, a
-     field/column name, a function name, or a route inline in product prose.
-     Forbidden examples: `before_tax`, `auto_split`, `REURB_S`, `started_at`,
-     `split_distribution`, `localStorage`, `endpoint`, `mutation`, `enum`.
+   - Write in the SAME language the product UI uses. That language is
+     `{lang}` (from state.md).
+   - NEVER paste a foreign-language word, a DB enum value, a code constant,
+     a field/column name, a function name, or a route inline in product
+     prose. Anything snake_case, camelCase, an SQL enum value, a path
+     with slashes, or a function name is forbidden in product prose.
    - When a constant appears in code, HUNT for the user-visible label that
      represents it. Where to look (in this order): Vue/React templates near
-     the field, `:items=` arrays in selects, `t()` / `$t()` i18n keys (note:
-     this codebase has decaying i18n, prefer the inline templates), `text:` /
-     `label:` props, `computed` getters that translate enum → display text,
-     `<option>` children, formatter functions.
+     the field, `:items=` arrays in selects, `t()` / `$t()` i18n keys (note
+     i18n may be partial or decaying — prefer the inline templates if so),
+     `text:` / `label:` props, `computed` getters that translate enum →
+     display text, `<option>` children, formatter functions.
    - Use the visible label in the `.md`. If you can't find it, register a
-     pending question (`"Qual é o texto exibido para X?"`) and put a
-     descriptive placeholder in pt-BR, never the raw constant.
-   - Self-check before writing each paragraph: would a non-technical user
-     understand this sentence without opening the codebase? If no, rewrite.
+     pending question (in `{lang}`: "What label appears in the UI for X?")
+     and put a descriptive placeholder in `{lang}`, never the raw constant.
+   - Self-check before writing each paragraph: would a non-technical end
+     user understand this sentence without opening the codebase? If no,
+     rewrite.
    - Tech detail (constants, enum values, columns, file:line, routes) goes in
-     `.tech.md` — that's where it belongs.
+     `.tech.md` — that's where it belongs. Prose in `.tech.md` is also
+     in `{lang}`, but technical identifiers stay raw.
 
    ### Screenshot TODOs (BE GENEROUS in the product `.md`)
 
@@ -155,30 +164,35 @@ the user evaluate quality and budget.
      * an empty / success / error state
      * a step inside a wizard or multi-step flow
      * a settings section reachable from a named menu item
-   - Insert the admonition IMMEDIATELY after the paragraph that mentions the
-     surface. Use `Local:` for non-route surfaces:
+   - Insert the admonition IMMEDIATELY after the paragraph that mentions
+     the surface. Use the `Location:` field for non-route surfaces, the
+     `Route:` field for pure-route surfaces. Render the label words
+     (`Location`, `Route`, `Description`) in `{lang}`:
 
      ```markdown
      > [!TODO:screenshot]
-     > Local: barra lateral do projeto → seção "Parceiros e splits"
-     > Rota base: `/project/:project`
-     > Descrição: <o que essa superfície mostra, com contexto suficiente>
+     > Location: project sidebar → "Partners and splits" section
+     > Base route: `/project/:project`
+     > Description: <what this surface shows, with enough context>
      ```
 
      For pure-route surfaces:
 
      ```markdown
      > [!TODO:screenshot]
-     > Rota: `/pre-projects`
-     > Descrição: <o que essa tela mostra>
+     > Route: `/pre-projects`
+     > Description: <what this screen shows>
      ```
+
+     The English admonition label `[!TODO:screenshot]` stays as-is — it's
+     a parser token, not prose.
 
    - One screenshot, one TODO. Don't bundle multiple screens in one block.
 
    - Generate TWO files using the Write tool:
-     * `docs/<kind>/<cap-slug>/<article-slug>.md` (product flavor, idioma pt-BR)
-     * `docs/<kind>/<cap-slug>/<article-slug>.tech.md` (technical flavor, same lang)
-     * For journeys: `docs/jornadas/<slug>.md` and `.tech.md` (flat, no subdir)
+     * `docs/<kind>/<cap-slug>/<article-slug>.md` (product flavor, prose in `{lang}`)
+     * `docs/<kind>/<cap-slug>/<article-slug>.tech.md` (technical flavor, prose in `{lang}`)
+     * For journeys: `docs/journeys/<slug>.md` and `.tech.md` (flat, no subdir)
    - Front-matter on both:
      ```yaml
      ---
@@ -190,12 +204,12 @@ the user evaluate quality and budget.
      ---
      ```
 
-   ## If this article is is_intro=true
+   ## If this article has is_intro=true
 
    This is the OVERVIEW article of its capability. Special rules:
-   - Resumo do domínio inteiro da capacidade.
-   - Linka os irmãos com `[TODO:link=<cap>/<sibling-slug>]`.
-   - NÃO entre no detalhe operacional dos irmãos — cada um tem artigo próprio.
+   - Summary of the entire capability domain.
+   - Link siblings with `[TODO:link=<cap>/<sibling-slug>]`.
+   - DO NOT enter operational detail of the siblings — each has its own article.
 
    ## Prior interview pass (when previous answered interviews exist)
 
@@ -209,8 +223,8 @@ the user evaluate quality and budget.
       code's facts in .tech.md.
    4. If they DISAGREE → generate ONE pending question of `category: E`
       (code-suggested edges) with `confidence: high`, of the form:
-      `"O draft anterior diz X, mas o código no arquivo Y:linha Z mostra
-      W. Qual versão é a correta hoje?"`. Cite both sides literally.
+      `"The prior draft says X, but the code at file Y line Z shows W.
+      Which version is correct today?"`. Cite both sides literally.
    5. DO NOT generate a pending question for facts the human already
       answered in a prior interview, unless the code now contradicts
       the answer.
@@ -246,15 +260,15 @@ the user evaluate quality and budget.
    - append screenshot TODOs to the state's screenshot list
    - record cost (extract from your platform if possible, else estimate)
 
-7. **At the end of the batch:**
+7. **At the end of the batch** (render in `{lang}`):
    ```
-   ✓ Lote concluído — 4 artigos gerados (custo total ~$1.40)
-   Ainda faltam 62 artigos. Próximo passo:
-     - Rodar outro lote da Phase 4
-     - Avançar pra Phase 5 (vai stitchar SÓ os 4 atuais)
-     - Sair
+   ✓ Batch done — 4 articles generated (total cost ~$1.40)
+   62 articles still pending. Next step:
+     - Run another Phase 4 batch
+     - Advance to Phase 5 (will stitch ONLY the 4 just drafted)
+     - Quit
 
-   O que prefere?
+   What do you prefer?
    ```
 
 ## Pitfalls

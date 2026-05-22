@@ -19,10 +19,10 @@ Files in `.livedocs/cache/`:
 ## What to do
 
 > **DELEGATION**: each sub-step here (graphify extract, route extraction,
-> i18n extraction, model extraction) é trabalho braçal de I/O e parsing.
-> Spawne UM sub-agente por sub-step. O orquestrador (você) recebe APENAS o
-> resumo de cada (contagens, paths, samples) — NUNCA o conteúdo bruto dos
-> arquivos. Sub-agentes leem >50 arquivos cada; isso poluiria seu contexto.
+> i18n extraction, model extraction) is mechanical I/O and parsing work.
+> Spawn ONE sub-agent per sub-step. You (the orchestrator) receive ONLY
+> a summary from each (counts, paths, samples) — NEVER the raw file
+> contents. Sub-agents read 50+ files each; that would pollute your context.
 
 1. **Capture commit SHA:**
    ```bash
@@ -47,9 +47,9 @@ Files in `.livedocs/cache/`:
      graphify update . --force
      ```
 
-   - If NOT found: warn the user with:
-     > Graphify não está instalado. Vou continuar sem o sinal de grafo —
-     > a taxonomia ainda funciona com rotas, i18n e models. Pra instalar:
+   - If NOT found: warn the user (rendered in `{lang}`):
+     > Graphify is not installed. I'll continue without the graph signal —
+     > taxonomy still works from routes, i18n, and models. To install:
      > `uv tool install graphifyy`
 
 3. **Extract routes.** Detect frontend framework from `package.json`:
@@ -88,15 +88,15 @@ Files in `.livedocs/cache/`:
    ]
    ```
 
-6. **Summarize for the user:**
-   > Scan completo:
+6. **Summarize for the user** (render in `{lang}`):
+   > Scan complete:
    > - Commit SHA: `abc1234`
-   > - 139 rotas extraídas
-   > - 272 chaves i18n
+   > - 139 routes extracted
+   > - 272 i18n keys
    > - 18 models
-   > - Grafo: <X nós, Y arestas> ou "não disponível"
+   > - Graph: <X nodes, Y edges> or "not available"
    >
-   > Atualizar state.md e avançar pra Phase 2 (taxonomia)?
+   > Update state.md and advance to Phase 2 (taxonomy)?
 
 7. **Update `.livedocs/state.md`:** mark phase 1 done, save the counts in the
    state summary block.

@@ -11,26 +11,31 @@ perspective. This is the structure of the help center menu.
 - `.livedocs/cache/graphify-out/graph.json` (if available)
 
 ## Output
-`.livedocs/taxonomy.json` — proposed structure:
+`.livedocs/taxonomy.json` — proposed structure (titles, summaries, and
+slugs are in `{lang}`; keys stay English):
 
 ```json
 {
   "capabilities": [
     {
-      "slug": "cobranca-recorrente",
-      "title": "Cobrança recorrente",
-      "summary": "Cobrança automatizada de mensalidades com régua de inadimplência.",
+      "slug": "recurring-billing",
+      "title": "<title in {lang}>",
+      "summary": "<one-sentence summary in {lang}>",
       "code_anchors": ["src/billing/**", "src/jobs/charge.ts"],
       "articles": [
-        {"slug": "introducao", "title": "Visão geral de cobrança", "is_intro": true, "summary": "...", "code_anchors": ["src/billing/**"]}
+        {"slug": "overview", "title": "<title in {lang}>", "is_intro": true, "summary": "...", "code_anchors": ["src/billing/**"]}
       ]
     }
   ],
   "journeys": [
-    {"slug": "primeira-fatura", "title": "Da unidade cadastrada à primeira fatura paga", "summary": "...", "capability_refs": ["cobranca-recorrente", "onboarding-morador"]}
+    {"slug": "first-invoice", "title": "<title in {lang}>", "summary": "...", "capability_refs": ["recurring-billing", "resident-onboarding"]}
   ]
 }
 ```
+
+The example slugs above are English illustrations. In an actual pt-BR
+run, slugs would be `cobranca-recorrente`, `primeira-fatura`, etc. —
+the sub-agent picks slug language based on `{lang}` from state.
 
 ## What to do
 
@@ -46,43 +51,53 @@ perspective. This is the structure of the help center menu.
    > - 10–25 capabilities (= categories users can recognize as separate areas of the product)
    > - 3–10 journeys (= cross-cutting flows worth a guide of their own, end-to-end)
    >
+   > The user's language is `{lang}` (from state.md `Lang:`).
+   >
    > Rules:
-   > - Capability slugs: kebab-case in the user's language (pt-BR or en)
-   > - Each capability starts with 1 article (`introducao`, is_intro=true). You can propose more articles per capability if the area is rich (max 7 articles per capability).
+   > - Capability slugs: kebab-case, ASCII-fold of words IN `{lang}` (e.g.
+   >   `cobranca-recorrente` for pt-BR, `recurring-billing` for en).
+   > - Capability/article titles and summaries: in `{lang}`.
+   > - Each capability starts with 1 article whose slug is the `{lang}`
+   >   equivalent of "overview" or "introduction" (e.g. `introducao` in
+   >   pt-BR, `overview` in en), with `is_intro=true`. You can propose
+   >   more articles per capability if the area is rich (max 7 articles
+   >   per capability).
    > - Don't make a capability per route — group related routes into capabilities.
-   > - Use the user's guidance to disambiguate names (e.g. if they say "moradores" not "users", use moradores).
+   > - Use the user's guidance to disambiguate names (e.g. if they use a
+   >   specific term for an actor or domain object, prefer that).
    > - Don't invent functionality not in the signals.
    > - Output ONLY the JSON, no prose.
 
 3. **Save** the resulting JSON to `.livedocs/taxonomy.json`.
 
-4. **Render a human-readable preview** for the user:
+4. **Render a human-readable preview** for the user (render headers and
+   summary text in `{lang}` — example below shown in English):
 
    ```
-   Taxonomia proposta — 18 capacidades, 5 jornadas
+   Proposed taxonomy — 18 capabilities, 5 journeys
 
-   CAPACIDADES
-     1. cobranca-recorrente   "Cobrança recorrente"
-        Cobrança automatizada de mensalidades...
-        ▸ 1 artigo: introducao
+   CAPABILITIES
+     1. recurring-billing   "<title>"
+        <one-line summary>...
+        ▸ 1 article: overview
      2. ...
 
-   JORNADAS
-     J1. primeira-fatura      "Da unidade cadastrada à primeira fatura paga"
-         → cobranca-recorrente, onboarding-morador
+   JOURNEYS
+     J1. first-invoice      "<title>"
+         → recurring-billing, resident-onboarding
      ...
    ```
 
    Save to `.livedocs/taxonomy-preview.md` for the user to read.
 
-5. **Update state.md**, ask:
+5. **Update state.md**, ask (render in `{lang}`):
 
-   > Taxonomia proposta salva em `.livedocs/taxonomy-preview.md`. Próxima fase
-   > (3) é a revisão — você pode renomear, mesclar, remover, inspecionar
-   > capacidades, ou pedir pra eu SPLITTAR uma em mais artigos (1 chamada LLM
-   > a mais por split, ~$0.05).
+   > Taxonomy proposal saved at `.livedocs/taxonomy-preview.md`. Next
+   > phase (3) is review — you can rename, merge, remove, inspect
+   > capabilities, or ask me to SPLIT one into more articles (1 extra
+   > LLM call per split, ~$0.05).
    >
-   > Quer abrir o preview ou já entrar no menu de revisão?
+   > Open the preview, or go straight to the review menu?
 
 ## Pitfalls
 

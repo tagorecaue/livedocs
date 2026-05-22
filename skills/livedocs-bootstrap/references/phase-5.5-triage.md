@@ -91,8 +91,8 @@ For each pending question listed below, you must:
 
 - Pending questions: {list of Q objects from state}
 - Article files (read AND write):
-  - docs/capacidades/{capability_slug}/*.md
-  - docs/capacidades/{capability_slug}/*.tech.md
+  - docs/<capabilities-dir>/{capability_slug}/*.md
+  - docs/<capabilities-dir>/{capability_slug}/*.tech.md
 - Codebase: read-only access via grep/read tools.
 
 ## Process for each question
@@ -144,7 +144,7 @@ For each pending question listed below, you must:
       "answer": "The visible labels are 'Em aberto', 'Paga', 'Vencida', 'Cancelada'",
       "article_action": "corrected_text",
       "articles_modified": [
-        "docs/capacidades/cobranca/faturas.md"
+        "docs/<capabilities-dir>/billing/invoices.md"
       ],
       "cross_flavor_synced": false,
       "cross_flavor_reason": "tech.md already uses code-level enum names; product.md needed labels",
