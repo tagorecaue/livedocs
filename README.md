@@ -2,10 +2,19 @@
 
 <img src="assets/banner.jpg" alt="LiveDocs banner" width="900">
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Status](https://img.shields.io/badge/status-alpha-orange.svg)]()
-
 </div>
+
+<p align="center">
+  🇺🇸 <a href="README.md">English</a> | 🇧🇷 <a href="docs/translations/README.pt-BR.md">Português</a>
+</p>
+
+<p align="center">
+  <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg" alt="License: AGPL v3"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/status-alpha-orange.svg" alt="Status: alpha"/></a>
+  <a href="https://github.com/safishamsi/graphify"><img src="https://img.shields.io/github/stars/safishamsi/graphify?style=flat&label=graphify%20%E2%AD%90&color=yellow" alt="graphify stars"/></a>
+  <a href="https://www.linkedin.com/in/tagorecaue/"><img src="https://img.shields.io/badge/LinkedIn-Tag%C3%B4re%20Cardoso-0077B5?logo=linkedin" alt="LinkedIn"/></a>
+  <a href="https://github.com/tagorecaue"><img src="https://img.shields.io/badge/GitHub-tagorecaue-181717?logo=github" alt="GitHub"/></a>
+</p>
 
 # LiveDocs
 Document any SaaS, end-to-end, from its source code plus a guided
@@ -21,8 +30,8 @@ devs). Both live inside the codebase. No cloud, no lock-in.
 
 1. **Read the repo, propose a taxonomy.** Builds a semantic graph
    of the codebase (using
-   [graphify](https://github.com/safishamsi/graphify), the
-   51k-star MIT-licensed knowledge-graph tool by Safi Shamsi),
+   [graphify](https://github.com/safishamsi/graphify) — the
+   widely-used MIT-licensed knowledge-graph tool by Safi Shamsi),
    derives categories and articles, you approve.
    → [Phase 1](skills/livedocs-bootstrap/references/phase-1-scan.md),
    [2](skills/livedocs-bootstrap/references/phase-2-taxonomy.md),
@@ -108,10 +117,9 @@ can interrupt and resume any time.
 - A coding agent with sub-agent / Task primitives, file write, and
   shell. Verified: Claude Code (Sonnet 4 / Opus), Hermes (Opus 4.7),
   Codex CLI. Smaller models drop Phase 4 quality noticeably.
-- [`graphify`](https://github.com/safishamsi/graphify)
-  ([⭐ 51k+ on GitHub, MIT-licensed](https://github.com/safishamsi/graphify))
-  — installed automatically by `/setup-livedocs`. Without it Phase 2's
-  taxonomy is weaker, but the rest still works.
+- [`graphify`](https://github.com/safishamsi/graphify) — installed
+  automatically by `/setup-livedocs`. Without it Phase 2's taxonomy
+  is weaker, but the rest still works.
 - A git repo (Phase 1 records the scan SHA; later phases
   commit-per-batch).
 - `node` / `npx` if you use the one-line install above. Skip if you
