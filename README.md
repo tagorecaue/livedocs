@@ -19,8 +19,11 @@ devs). Both live inside the codebase. No cloud, no lock-in.
 
 ## How it works, in 5 steps
 
-1. **Read the repo, propose a taxonomy.** Builds a semantic graph,
-   derives categories and articles. You approve.
+1. **Read the repo, propose a taxonomy.** Builds a semantic graph
+   of the codebase (using
+   [graphify](https://github.com/safishamsi/graphify), the
+   51k-star MIT-licensed knowledge-graph tool by Safi Shamsi),
+   derives categories and articles, you approve.
    → [Phase 1](skills/livedocs-bootstrap/references/phase-1-scan.md),
    [2](skills/livedocs-bootstrap/references/phase-2-taxonomy.md),
    [3](skills/livedocs-bootstrap/references/phase-3-review.md)
@@ -105,9 +108,10 @@ can interrupt and resume any time.
 - A coding agent with sub-agent / Task primitives, file write, and
   shell. Verified: Claude Code (Sonnet 4 / Opus), Hermes (Opus 4.7),
   Codex CLI. Smaller models drop Phase 4 quality noticeably.
-- [`graphify`](https://github.com/safishamsi/graphify) — installed
-  automatically by `/setup-livedocs`. Without it Phase 2's taxonomy
-  is weaker, but the rest still works.
+- [`graphify`](https://github.com/safishamsi/graphify)
+  ([⭐ 51k+ on GitHub, MIT-licensed](https://github.com/safishamsi/graphify))
+  — installed automatically by `/setup-livedocs`. Without it Phase 2's
+  taxonomy is weaker, but the rest still works.
 - A git repo (Phase 1 records the scan SHA; later phases
   commit-per-batch).
 - `node` / `npx` if you use the one-line install above. Skip if you
