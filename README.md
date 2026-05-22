@@ -1,14 +1,13 @@
 <div align="center">
 
-# LiveDocs
-
-<img src="assets/banner.png" alt="LiveDocs banner" width="600">
+<img src="assets/banner.png" alt="LiveDocs banner" width="900">
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Status](https://img.shields.io/badge/status-alpha-orange.svg)]()
 
 </div>
 
+# LiveDocs
 Document any SaaS, end-to-end, from its source code plus a guided
 interview with the developer. The agent reads the repo, proposes a
 taxonomy, drafts every article, then asks you only the questions the
