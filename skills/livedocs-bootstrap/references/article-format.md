@@ -19,18 +19,23 @@ kind: capability                     # or "journey"
 flavor: product                      # or "tech"  (use these English values verbatim)
 status: drafted                      # drafted | stitched | refined
 generated_at: "2026-05-21"
+skill_version: "1.3.0"               # value from SKILL.md front-matter at generation time
 last_interview: ""                   # ISO date of last user answer affecting this guide
 source_files:                        # added during phase 4, optional
   - src/projects/...
   - prisma/schema.prisma
 related_guides:                      # added during phase 5
-  - cobranca-recorrente/emissao-boletos
+  - recurring-billing/issue-invoices
 ---
 ```
 
 Front-matter KEYS stay in English (skill contract). VALUES like `title`
 are in `{lang}`. The `flavor` value is one of the fixed strings
 `product` | `tech` — those are enum-like skill tokens, not prose.
+`skill_version` is **mandatory** — every article records the version of
+this skill that produced or last modified it. Phase 7 and future
+maintenance use it to detect "this article was written by an older
+skill version, output conventions may differ" and offer a re-pass.
 
 ## Sections — product flavor (`.md`)
 

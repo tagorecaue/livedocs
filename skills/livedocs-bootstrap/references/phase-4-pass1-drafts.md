@@ -55,7 +55,7 @@ the user evaluate quality and budget.
    them. If not, sequential is fine — but ALWAYS print progress:
 
    ```
-   [3/12] iniciando: gestao-projetos/criar-projeto…
+   [3/12] starting: project-management/create-project…
    ```
 
    Time-check before the call. Use the prompt template below.
@@ -199,8 +199,10 @@ the user evaluate quality and budget.
      slug: <cap-slug>/<article-slug>     # or just <slug> for journeys
      title: <title>
      kind: capability                     # or "journey"
+     flavor: product                      # or "tech"  (the file being written)
      status: drafted
      generated_at: "<ISO date>"
+     skill_version: "<value from this SKILL.md's front-matter>"
      ---
      ```
 

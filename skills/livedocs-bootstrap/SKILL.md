@@ -6,7 +6,7 @@ description: |
   paired product + technical guides organized as Categories (capabilities) and Articles,
   with cross-links, pending questions, and screenshot TODOs. Drives the whole 7-phase
   flow without leaving the chat.
-version: 1.2.0
+version: 1.3.0
 author: Tagore + LiveDocs
 ---
 
@@ -103,6 +103,7 @@ Each phase has a detailed reference. Load it when you enter that phase:
 Shared formats and conventions:
 
 - **Language handling (READ FIRST)** — `references/language-handling.md`
+- **Privacy and context boundaries** — `references/privacy.md`
 - **Article markdown structure** — `references/article-format.md`
 - **State file format** — `references/state-format.md`
 - **Screenshot TODOs** — `references/screenshot-todos.md`
@@ -240,6 +241,17 @@ canonical entry sequence:
     Also: **anti-loop guard** — if the same tool call fails 2× with the
     same error message, the sub-agent ABORTS with `status: "aborted"`
     and the error. Do not retry silently — burns context for nothing.
+
+13. **Privacy first — bounded sub-agent reading scope.** Never send
+    secrets, credentials, or `.gitignore`d content into a sub-agent's
+    context, even if the user's tool permissions would technically allow
+    it. The orchestrator filters paths against the denylist BEFORE
+    composing prompts. See `references/privacy.md` for the full rule:
+    `.env*`, `secrets/`, `*.pem`/`*.key`, `.aws/`, `.ssh/`, anything in
+    `.gitignore` or `.git/`, plus the heavy-noise dirs (`node_modules/`,
+    `vendor/`, `.venv/`). The user gets a one-time warning in Phase 0
+    that guidance text WILL appear in later LLM calls so they can
+    self-redact before saving.
 
 ---
 

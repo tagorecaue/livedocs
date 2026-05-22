@@ -70,6 +70,17 @@ Don't proceed without one of:
 
 ### Step 4 — Persist guidance to disk
 
+Before saving, give the user a one-time privacy heads-up (render in
+`{lang}`):
+
+> Heads-up: this guidance text will be included in many later LLM
+> calls, including to sub-agents. Don't paste secrets, API keys, real
+> customer data, or anything you wouldn't want to land in a provider
+> log. Want to edit before I save?
+
+If the user wants to edit, let them re-paste or edit `.livedocs/guidance.md`
+and signal "saved" again. Otherwise, persist as-is.
+
 Always write `.livedocs/guidance.md` with the captured text (or an
 empty-file marker if none). This is the source of truth for later phases.
 

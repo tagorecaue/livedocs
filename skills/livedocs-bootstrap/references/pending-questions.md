@@ -73,7 +73,7 @@ operational reality, or the human's history with the system.**
 ## Anatomy of a pending question
 
 ```
-Q3 — origin: gestao-projetos/criar-projeto — confidence: low — category: B
+Q3 — origin: project-management/create-project — confidence: low — category: B
   Question: When entity A moves to stage 'Negotiation', does it trigger any
             automatic notification to team members?
   Provisional answer: No automatic notification — members see it on opening the board.
@@ -106,7 +106,7 @@ Inside `.livedocs/state.md`, in the "Pending questions" section. Format:
 ```markdown
 ## Pending questions (open: 7, answered: 0, merged: 0, answered_by_code: 0)
 
-- **Q1** [gestao-projetos/criar-projeto] [conf: high] How does X interact with Y?
+- **Q1** [project-management/create-project] [conf: high] How does X interact with Y?
   - Provisional: "X always calls Y first".
 - **Q2** [cobranca/conciliacao] [conf: low] When bank ack returns 404, what does the system do?
   - Provisional: "Retries 3 times then alerts admin".

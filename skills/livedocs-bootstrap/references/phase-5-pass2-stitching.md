@@ -45,7 +45,7 @@ output is patches, not full rewrites.
    <index of others>
 
    ## Placeholders found in this guide
-   - [TODO:link=cobranca-recorrente/emissao-boletos]
+   - [TODO:link=recurring-billing/issue-invoices]
    - [TODO:link=primeira-fatura]
    - ...
 
@@ -84,8 +84,8 @@ output is patches, not full rewrites.
 
       Special case — `.tech.md` containing `[TODO:link=<same-slug>]`
       pointing to its OWN product sibling (e.g.
-      `contratos/gerar-assinar-contrato.tech.md` has
-      `[TODO:link=contratos/gerar-assinar-contrato]`):
+      `contracts/issue-and-sign.tech.md` has
+      `[TODO:link=contracts/issue-and-sign]`):
       **REMOVE the placeholder and its surrounding phrase entirely** —
       do NOT leave as unresolved, do NOT add a cross-flavor link.
       Report the slug in a `cross_flavor_removed` array of the response.
@@ -106,7 +106,7 @@ output is patches, not full rewrites.
      "contradictions": [
        {"this_guide_says": "...", "other_guide": "slug", "other_says": "..."}
      ],
-     "cross_flavor_removed": ["contratos/gerar-assinar-contrato"],
+     "cross_flavor_removed": ["contracts/issue-and-sign"],
      "new_pending_questions": [
        {"question": "...", "provisional_answer": "...", "confidence": "low"}
      ],
@@ -121,7 +121,10 @@ output is patches, not full rewrites.
    not-X. Which is correct?"*. Add to state.
 
 5. **Update state.md** — mark each stitched article, log links_added /
-   contradictions counts.
+   contradictions counts. Also: bump the article's `skill_version` in
+   front-matter to the current SKILL.md version (every phase that
+   modifies an article updates this field — that's how output
+   versioning works).
 
 6. **At the end** (render in `{lang}`):
    ```

@@ -27,14 +27,14 @@ or TOML) so the user can READ and EDIT it manually if anything goes wrong.
 
 ## Articles status
 
-### Capability: gestao-projetos
-- [x] `gestao-projetos/visao-geral`  drafted · $0.49 · 187s
-- [x] `gestao-projetos/criar-projeto`  drafted · $0.42 · 162s
-- [ ] `gestao-projetos/configurar-financeiro`  pending
-- [ ] `gestao-projetos/kanban`  pending
+### Capability: project-management
+- [x] `project-management/overview`  drafted · $0.49 · 187s
+- [x] `project-management/create-project`  drafted · $0.42 · 162s
+- [ ] `project-management/configure-financial`  pending
+- [ ] `project-management/kanban`  pending
 
-### Capability: cobranca-recorrente
-- [ ] `cobranca-recorrente/introducao`  pending
+### Capability: recurring-billing
+- [ ] `recurring-billing/overview`  pending
 - ...
 
 ### Journeys
@@ -43,14 +43,14 @@ or TOML) so the user can READ and EDIT it manually if anything goes wrong.
 
 ## Pending questions (open: 7, answered: 0, merged: 0)
 
-- **Q1** [gestao-projetos/criar-projeto] How does X interact with Y when Z?
+- **Q1** [project-management/create-project] How does X interact with Y when Z?
   - Provisional: "...". Confidence: low.
 - **Q2** ...
 
 ## Screenshot TODOs (open: 12)
 
-- [open] `gestao-projetos/visao-geral.md` — `/projects` — "Kanban view with all stages"
-- [open] `gestao-projetos/criar-projeto.md` — `/projects/new` — "Wizard step 1"
+- [open] `project-management/overview.md` — `/projects` — "Kanban view with all stages"
+- [open] `project-management/create-project.md` — `/projects/new` — "Wizard step 1"
 - ...
 
 ## Cost log
@@ -58,9 +58,9 @@ or TOML) so the user can READ and EDIT it manually if anything goes wrong.
 | Phase | Item | Cost USD |
 |---|---|---|
 | 2 | taxonomy-propose | $0.34 |
-| 3 | split gestao-projetos | $0.05 |
-| 4 | draft visao-geral | $0.49 |
-| 4 | draft criar-projeto | $0.42 |
+| 3 | split project-management | $0.05 |
+| 4 | draft overview | $0.49 |
+| 4 | draft create-project | $0.42 |
 ```
 
 ## Read & write conventions

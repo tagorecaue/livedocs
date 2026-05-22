@@ -44,8 +44,8 @@ user and proceed to Phase 6 with the unfiltered backlog instead.
 ### Step 1 — Group questions by capability
 
 Read pending questions from state. Group by origin capability (use
-first segment of `origin` slug, e.g. `gestao-projetos/criar-projeto`
-→ capability `gestao-projetos`).
+first segment of `origin` slug, e.g. `project-management/create-project`
+→ capability `project-management`).
 
 ### Step 2 — Spawn one sub-agent per capability
 
@@ -116,6 +116,8 @@ For each pending question listed below, you must:
         - `missing` + conceptual addition (paragraph, flow) → emit
           `proposed_diff`.
      d. Mark question `status: answered_by_code` with full evidence.
+        Bump `skill_version` front-matter on any article you modified
+        (value comes from the current SKILL.md front-matter).
    - **No evidence found** → mark question `status: needs_human`.
 
 ## Output (return JSON)

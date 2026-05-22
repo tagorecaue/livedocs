@@ -110,7 +110,8 @@ Slugs INSIDE those dirs are also in `{lang}` (see slug rules above).
 
 ## Slugs are special
 
-Slugs (article paths like `gestao-projetos/criar-projeto`) are
+Slugs (article paths like `gestao-projetos/criar-projeto` for a pt-BR
+run, or `project-management/create-project` for an en run) are
 **chosen in `{lang}` during Phase 2**, then stay as-is for the
 lifetime of the project. They appear in URLs, file paths, and
 cross-references — translating them later would break links.

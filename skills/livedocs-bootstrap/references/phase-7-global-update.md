@@ -78,6 +78,8 @@ removing provisional answers and updating sections that depended on them.
 
 4. **After all affected guides updated:**
    - mark them `status="refined"` in state
+   - bump each guide's `skill_version` front-matter to the current
+     SKILL.md version
    - mark answered questions `status="resolved"`
    - update state.md with the final summary
 
