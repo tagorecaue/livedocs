@@ -22,6 +22,7 @@ or TOML) so the user can READ and EDIT it manually if anything goes wrong.
 - [x] **3 — Review** completed (taxonomy approved 2026-05-21T13:22:08)
 - [/] **4 — Pass 1** in progress (5/67 articles drafted)
 - [ ] 5 — Pass 2
+- [ ] 5.5 — Code-first triage
 - [ ] 6 — Refinement
 - [ ] 7 — Global update
 
@@ -41,7 +42,7 @@ or TOML) so the user can READ and EDIT it manually if anything goes wrong.
 - [ ] `primeira-fatura`  pending
 - ...
 
-## Pending questions (open: 7, answered: 0, merged: 0)
+## Pending questions (open: 7, answered: 0, merged: 0, answered_by_code: 0)
 
 - **Q1** [project-management/create-project] How does X interact with Y when Z?
   - Provisional: "...". Confidence: low.

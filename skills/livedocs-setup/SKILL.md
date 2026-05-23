@@ -82,8 +82,8 @@ Pick the first one available and prefer them in this order:
 | Tool | Command |
 |---|---|
 | `uv` | `uv tool install graphifyy` |
-| `pipx` | `pipx install graphify` |
-| `pip3` | `pip3 install --user graphify` (last resort — pollutes user site-packages) |
+| `pipx` | `pipx install graphifyy` |
+| `pip3` | `pip3 install --user graphifyy` (last resort — pollutes user site-packages) |
 
 If NONE are installed, tell the user:
 

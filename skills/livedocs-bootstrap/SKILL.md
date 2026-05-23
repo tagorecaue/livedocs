@@ -6,7 +6,7 @@ description: |
   paired product + technical guides organized as Categories (capabilities) and Articles,
   with cross-links, pending questions, and screenshot TODOs. Drives the whole 7-phase
   flow without leaving the chat.
-version: 1.3.0
+version: 1.3.1
 author: Tagore + LiveDocs
 ---
 
@@ -155,12 +155,12 @@ canonical entry sequence:
    >2KB of output → sub-agent. Anything conversational with the user or
    small (under 500 chars in/out) → handle directly.
 
-3. **Evidence-first.** Every claim in a guide MUST be backed by either:
+2. **Evidence-first.** Every claim in a guide MUST be backed by either:
    (a) `file:line` code reference, (b) user-confirmed answer, or
    (c) inheritance from another guide. No invention. Mark 🟡 hypotheses
    in tech guides; never in product guides.
 
-3b. **UI language in product guides = the language the user actually sees.**
+3. **UI language in product guides = the language the user actually sees.**
     Hard rules for the `.md` (product flavor):
 
     - NEVER write a foreign-language word in prose when the product UI is in
