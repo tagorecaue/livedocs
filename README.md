@@ -159,24 +159,17 @@ Feedback, bug reports, and reproduction repos welcome.
 
 ## Contributors
 
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/tagorecaue">
-        <img src="https://images.weserv.nl/?url=github.com/tagorecaue.png&w=120&h=120&fit=cover&mask=circle" width="60" height="60" alt="Tagôre Cardoso"/><br/>
-        <sub><b>Tagôre Cardoso</b></sub>
-      </a><br/>
-      <sub>Creator &amp; maintainer</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/FredySchaible">
-        <img src="https://images.weserv.nl/?url=github.com/FredySchaible.png&w=120&h=120&fit=cover&mask=circle" width="60" height="60" alt="Fredy Schaible"/><br/>
-        <sub><b>Fredy Schaible</b></sub>
-      </a><br/>
-      <sub>Contributor</sub>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <a href="https://github.com/tagorecaue" title="Tagôre Cardoso — creator &amp; maintainer">
+    <img src="https://images.weserv.nl/?url=github.com/tagorecaue.png&w=120&h=120&fit=cover&mask=circle" width="60" height="60" alt="Tagôre Cardoso"/>
+  </a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/FredySchaible" title="Fredy Schaible — contributor">
+    <img src="https://images.weserv.nl/?url=github.com/FredySchaible.png&w=120&h=120&fit=cover&mask=circle" width="60" height="60" alt="Fredy Schaible"/>
+  </a>
+</p>
+
+<p align="center"><sub><a href="https://github.com/tagorecaue"><b>Tagôre Cardoso</b></a> &nbsp;·&nbsp; <a href="https://github.com/FredySchaible"><b>Fredy Schaible</b></a></sub></p>
 
 Want to be here? See [`CLAUDE.md`](CLAUDE.md) for dev guidelines, then open a PR.
 
