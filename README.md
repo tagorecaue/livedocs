@@ -159,7 +159,7 @@ Feedback, bug reports, and reproduction repos welcome.
 
 ## Contributors
 
-<p align="center">
+<p>
   <a href="https://github.com/tagorecaue" title="Tagôre Cardoso — creator &amp; maintainer">
     <img src="https://images.weserv.nl/?url=github.com/tagorecaue.png&w=120&h=120&fit=cover&mask=circle" width="60" height="60" alt="Tagôre Cardoso"/>
   </a>

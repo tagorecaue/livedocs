@@ -164,7 +164,7 @@ Feedback, bug reports e repositórios de reprodução são bem-vindos.
 
 ## Contribuidores
 
-<p align="center">
+<p>
   <a href="https://github.com/tagorecaue" title="Tagôre Cardoso — criador &amp; mantenedor">
     <img src="https://images.weserv.nl/?url=github.com/tagorecaue.png&w=120&h=120&fit=cover&mask=circle" width="60" height="60" alt="Tagôre Cardoso"/>
   </a>
