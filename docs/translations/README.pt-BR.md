@@ -168,14 +168,14 @@ Feedback, bug reports e repositórios de reprodução são bem-vindos.
   <tr>
     <td align="center">
       <a href="https://github.com/tagorecaue">
-        <img src="https://github.com/tagorecaue.png?size=100" width="100" height="100" alt="Tagôre Cardoso"/><br/>
+        <img src="https://images.weserv.nl/?url=github.com/tagorecaue.png&w=120&h=120&fit=cover&mask=circle" width="60" height="60" alt="Tagôre Cardoso"/><br/>
         <sub><b>Tagôre Cardoso</b></sub>
       </a><br/>
       <sub>Criador &amp; mantenedor</sub>
     </td>
     <td align="center">
       <a href="https://github.com/FredySchaible">
-        <img src="https://github.com/FredySchaible.png?size=100" width="100" height="100" alt="Fredy Schaible"/><br/>
+        <img src="https://images.weserv.nl/?url=github.com/FredySchaible.png&w=120&h=120&fit=cover&mask=circle" width="60" height="60" alt="Fredy Schaible"/><br/>
         <sub><b>Fredy Schaible</b></sub>
       </a><br/>
       <sub>Contribuidor</sub>
