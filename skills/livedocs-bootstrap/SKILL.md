@@ -6,7 +6,7 @@ description: |
   paired product + technical guides organized as Categories (capabilities) and Articles,
   with cross-links, pending questions, and screenshot TODOs. Drives the whole 7-phase
   flow without leaving the chat.
-version: 1.3.0
+version: 1.3.1
 author: Tagore + LiveDocs
 ---
 

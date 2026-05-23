@@ -15,6 +15,49 @@ history.
   companion skill `livedocs-setup` (v1.0.0) checks for `graphify`
   and installs it via `uv` or `pipx` on first run.
 
+## [1.3.1] — 2026-05-23
+
+### Fixed
+- **i18n leaks in references.** `phase-2-taxonomy.md` no longer
+  hardcodes `introducao` for default intro articles — slug now
+  resolves from `{lang}` (`overview`/`introducao`/`descripcion`)
+  with `is_intro: true`. `phase-4-pass1-drafts.md` no longer writes
+  `docs/<kind>/...`; uses `<capabilities-dir>` / `<journeys-dir>`
+  resolved via `references/language-handling.md`. Phase 6 interview
+  files renamed from pt-BR-only (`bloco-a-significado-produto.md`)
+  to language-neutral (`block-a-product-meaning.md`); contents
+  already in `{lang}`, only filenames leaked.
+- **Phase 5.5 proposed diffs were silently lost.** Review of the
+  diffs is now required before bootstrap completes. User chooses
+  `before_phase_6` (recommended) or `during_phase_7`, persisted in
+  state as `proposed_diffs_review`. Phase 7 step 1.5 reads that
+  field and injects the diff into each affected sub-agent prompt
+  when `during_phase_7` was chosen.
+- **Phase 6 dropped `open` questions when Phase 5.5 was skipped.**
+  Step 1 now branches on whether 5.5 ran: with 5.5, filter
+  `needs_human` only; without 5.5, include both `needs_human` and
+  `open`. No silent loss either way.
+- **Phase 7 only patched one origin guide per question.** Dedup in
+  Phase 6 merges questions originating from multiple capabilities;
+  field renamed from `canonical_origin` (string) to
+  `canonical_origins` (list, union-merged across absorbed
+  canonicals). Phase 7 now routes each answer to ALL origin guides.
+- **Phase 4 sub-agent return contract.** Sub-agent now self-verifies
+  with `wc -c` + `grep slug:` and returns `verification_passed:
+  true|false`. Orchestrator checks the flag instead of running a
+  separate `stat` after the call (was duplicate work, and could
+  diverge from what the sub-agent thought it wrote).
+- **Duplicated principle numbering in SKILL.md** (`3` + `3b`). Now
+  cleanly numbered 1-13.
+- **`state-format.md` missed Phase 5.5** in the example phase
+  checklist and the `answered_by_code` counter.
+
+### Changed
+- `livedocs-setup`: package name corrected to `graphifyy` (was
+  `graphify`) in the `pipx` / `pip3` install commands. The PyPI
+  package is `graphifyy` (double-y, naming reclaim); `graphify`
+  fails on install.
+
 ## [1.3.0] — 2026-05-22
 
 ### Added
