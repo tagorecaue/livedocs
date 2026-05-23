@@ -162,6 +162,29 @@ errado em runs acompanhados, não de whiteboarding.
 
 Feedback, bug reports e repositórios de reprodução são bem-vindos.
 
+## Contribuidores
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/tagorecaue">
+        <img src="https://github.com/tagorecaue.png?size=100" width="100" height="100" alt="Tagôre Cardoso"/><br/>
+        <sub><b>Tagôre Cardoso</b></sub>
+      </a><br/>
+      <sub>Criador &amp; mantenedor</sub>
+    </td>
+    <td align="center">
+      <a href="https://github.com/FredySchaible">
+        <img src="https://github.com/FredySchaible.png?size=100" width="100" height="100" alt="Fredy Schaible"/><br/>
+        <sub><b>Fredy Schaible</b></sub>
+      </a><br/>
+      <sub>Contribuidor</sub>
+    </td>
+  </tr>
+</table>
+
+Quer aparecer aqui? Veja [`CLAUDE.md`](../../CLAUDE.md) para diretrizes de desenvolvimento e abra um PR.
+
 ## Licença
 
 AGPL-3.0-or-later. Forks devem ser abertos. Veja

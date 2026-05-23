@@ -157,6 +157,29 @@ attended runs, not from whiteboarding.
 
 Feedback, bug reports, and reproduction repos welcome.
 
+## Contributors
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/tagorecaue">
+        <img src="https://github.com/tagorecaue.png?size=100" width="100" height="100" alt="Tagôre Cardoso"/><br/>
+        <sub><b>Tagôre Cardoso</b></sub>
+      </a><br/>
+      <sub>Creator &amp; maintainer</sub>
+    </td>
+    <td align="center">
+      <a href="https://github.com/FredySchaible">
+        <img src="https://github.com/FredySchaible.png?size=100" width="100" height="100" alt="Fredy Schaible"/><br/>
+        <sub><b>Fredy Schaible</b></sub>
+      </a><br/>
+      <sub>Contributor</sub>
+    </td>
+  </tr>
+</table>
+
+Want to be here? See [`CLAUDE.md`](CLAUDE.md) for dev guidelines, then open a PR.
+
 ## License
 
 AGPL-3.0-or-later. Forks must open. See [`LICENSE`](LICENSE).
