@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="../../assets/banner.jpg" alt="LiveDocs banner" width="900">
+<img src="../../assets/banner-ptBR.jpg" alt="LiveDocs banner" width="900">
 
 </div>
 
