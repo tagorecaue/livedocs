@@ -154,13 +154,13 @@ quando um README único basta, ou quando o repo é pequeno.
 ## Autor
 
 Feito por **Tagôre Cardoso** — projetado e dogfoodado no
-🇧🇷 **Brasil**, em um SaaS de produção real. As decisões de design
-que parecem opinativas vieram de coisas dando errado em runs
-acompanhados, não de whiteboarding.
+🇧🇷 **Brasil**, em um SaaS de produção real com clientes pagantes
+e mais de 2 anos em produção. Esse run gerou **156 artigos** e
+**mais de 30.000 linhas** de documentação de alta qualidade. As
+decisões de design que parecem opinativas vieram de coisas dando
+errado em runs acompanhados, não de whiteboarding.
 
-Tagôre no [LinkedIn](https://www.linkedin.com/in/tagorecaue/) e no
-[GitHub](https://github.com/tagorecaue). Feedback, bug reports e
-repositórios de reprodução são bem-vindos.
+Feedback, bug reports e repositórios de reprodução são bem-vindos.
 
 ## Licença
 

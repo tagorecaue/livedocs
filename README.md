@@ -149,13 +149,13 @@ single ad-hoc README is enough, or when the repo is tiny.
 ## Author
 
 Built by **Tagôre Cardoso** — designed and dogfooded in
-🇧🇷 **Brazil**, on a real production SaaS. The design choices that
-look opinionated came from things going wrong in attended runs, not
-from whiteboarding.
+🇧🇷 **Brazil**, on a real production SaaS with paying customers
+and 2+ years in production. That run generated **156 articles**
+and **30,000+ lines** of high-quality documentation. The design
+choices that look opinionated came from things going wrong in
+attended runs, not from whiteboarding.
 
-Find Tagôre on [LinkedIn](https://www.linkedin.com/in/tagorecaue/)
-or [GitHub](https://github.com/tagorecaue). Feedback, bug reports,
-and reproduction repos welcome.
+Feedback, bug reports, and reproduction repos welcome.
 
 ## License
 
