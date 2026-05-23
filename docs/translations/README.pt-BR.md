@@ -174,8 +174,6 @@ Feedback, bug reports e repositórios de reprodução são bem-vindos.
   </a>
 </p>
 
-<p align="center"><sub><a href="https://github.com/tagorecaue"><b>Tagôre Cardoso</b></a> &nbsp;·&nbsp; <a href="https://github.com/FredySchaible"><b>Fredy Schaible</b></a></sub></p>
-
 Quer aparecer aqui? Veja [`CLAUDE.md`](../../CLAUDE.md) para diretrizes de desenvolvimento e abra um PR.
 
 ## Licença

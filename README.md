@@ -169,8 +169,6 @@ Feedback, bug reports, and reproduction repos welcome.
   </a>
 </p>
 
-<p align="center"><sub><a href="https://github.com/tagorecaue"><b>Tagôre Cardoso</b></a> &nbsp;·&nbsp; <a href="https://github.com/FredySchaible"><b>Fredy Schaible</b></a></sub></p>
-
 Want to be here? See [`CLAUDE.md`](CLAUDE.md) for dev guidelines, then open a PR.
 
 ## License
