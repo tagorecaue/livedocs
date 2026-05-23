@@ -32,9 +32,14 @@ section. It captures user feedback about the guide itself.
 
 ### Step 1 — Load questions
 
-Read `.livedocs/state.md`, filter `status == "needs_human"`. If none,
-skip Phase 6 entirely and tell the user that Phase 5.5 resolved everything
-from code.
+Read `.livedocs/state.md`. Check whether Phase 5.5 ran:
+- **Phase 5.5 ran** (state shows `[x] 5.5 — Code-first triage`): filter
+  `status == "needs_human"`. If none, skip Phase 6 and tell the user that
+  Phase 5.5 resolved everything from code.
+- **Phase 5.5 was skipped**: filter `status in ("needs_human", "open")`.
+  All unresolved questions go to the interview regardless of status.
+
+Never silently drop `status == "open"` questions when 5.5 was not run.
 
 ### Step 2 — Dedup (two-pass when N is large)
 
@@ -68,7 +73,7 @@ Prompt template per sub-agent:
 >     {
 >       "canonical_id": "Q3",
 >       "canonical_question": "...",
->       "canonical_origin": "...",
+>       "canonical_origins": ["billing/invoices", "project-management/create-project"],
 >       "canonical_confidence": "low|high",
 >       "canonical_provisional_answer": "...",
 >       "merged_ids": ["Q7", "Q11"]
@@ -123,10 +128,14 @@ The orchestrator (you) combines Pass 1 and Pass 2 results via
 1. Start with Pass 1 clusters.
 2. For each Pass 2 cluster that merges canonicals from different
    Pass 1 batches: absorb those canonicals into the new canonical.
-3. Sanitize: remove any `canonical_id` that appears inside its own
+3. **Union `canonical_origins`**: for every absorbed canonical, union its
+   `canonical_origins` list into the surviving canonical's list. Deduplicate.
+   This ensures Phase 7 routes the answer to ALL origin guides, not just
+   the canonical's original guide.
+4. Sanitize: remove any `canonical_id` that appears inside its own
    `merged_ids` (defensive guard against the bug above).
-4. Validate invariant: each original Q appears in exactly one cluster.
-5. Sort clusters by `len(merged_ids) DESC`, then `canonical_id ASC`.
+5. Validate invariant: each original Q appears in exactly one cluster.
+6. Sort clusters by `len(merged_ids) DESC`, then `canonical_id ASC`.
 
 Save the result to `.livedocs/cache/questions/clusters-final.json`.
 
@@ -146,12 +155,12 @@ Write one markdown file per block to `.livedocs/interview/`:
 
 ```
 .livedocs/interview/
-├── bloco-a-significado-produto.md
-├── bloco-b-transicoes-gatilhos.md
-├── bloco-c-invariantes.md
-├── bloco-d-ux-suporte.md
-├── bloco-e-bordas-codigo.md
-└── bloco-f-direcao-guia.md
+├── block-a-product-meaning.md
+├── block-b-transitions-triggers.md
+├── block-c-invariants.md
+├── block-d-ux-support.md
+├── block-e-code-edges.md
+└── block-f-guide-direction.md
 ```
 
 Each file has the same skeleton (see template below). User can answer

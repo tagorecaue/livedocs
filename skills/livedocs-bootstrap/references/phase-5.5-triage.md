@@ -239,16 +239,25 @@ Phase 5.5 complete:
   in blocks A-F. Proceed?
 ```
 
-### Step 5 — Optional review of proposed diffs
+### Step 5 — Review of proposed diffs (required before bootstrap is complete)
+
+If `articles_proposed_diff > 0`, these diffs represent conceptual corrections
+the skill confirmed from code but couldn't safely auto-apply. **They must be
+reviewed and applied** — otherwise the bootstrap ends with known article
+divergences silently unaddressed.
 
 Ask the user:
 
-> Want to review the {P} proposed diffs before Phase 6, or after?
+> Want to review the {P} proposed diffs before Phase 6, or during Phase 7?
 > They're at `.livedocs/triage/proposed/`.
+>
+> - **Before Phase 6** (recommended): articles come into the interview closer
+>   to truth — better questions, better answers.
+> - **During Phase 7**: Phase 7 sub-agents will also receive the relevant diff
+>   for each guide and apply it alongside the Q&A answers.
 
-Reviewing before Phase 6 means the human comes to the interview with
-articles closer to truth — better questions get better answers. But
-it's also extra work. Let the user choose.
+Record the user's choice in state under `proposed_diffs_review: "before_phase_6" |
+"during_phase_7"`. Phase 7 reads this field and acts accordingly.
 
 ---
 

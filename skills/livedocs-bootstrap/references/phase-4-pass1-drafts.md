@@ -189,10 +189,12 @@ the user evaluate quality and budget.
 
    - One screenshot, one TODO. Don't bundle multiple screens in one block.
 
-   - Generate TWO files using the Write tool:
-     * `docs/<kind>/<cap-slug>/<article-slug>.md` (product flavor, prose in `{lang}`)
-     * `docs/<kind>/<cap-slug>/<article-slug>.tech.md` (technical flavor, prose in `{lang}`)
-     * For journeys: `docs/journeys/<slug>.md` and `.tech.md` (flat, no subdir)
+   - Generate TWO files using the Write tool. Resolve `<capabilities-dir>`
+     and `<journeys-dir>` from state.md `Lang:` via `references/language-handling.md`
+     (e.g. `capacidades/` for pt-BR, `capabilities/` for en):
+     * `docs/<capabilities-dir>/<cap-slug>/<article-slug>.md` (product flavor, prose in `{lang}`)
+     * `docs/<capabilities-dir>/<cap-slug>/<article-slug>.tech.md` (technical flavor, prose in `{lang}`)
+     * For journeys: `docs/<journeys-dir>/<slug>.md` and `.tech.md` (flat, no subdir)
    - Front-matter on both:
      ```yaml
      ---
@@ -247,14 +249,23 @@ the user evaluate quality and budget.
        {"question": "...", "provisional_answer": "...", "confidence": "low"}
      ],
      "screenshot_todos": [
-       {"route": "/path", "description": "..."}
-     ]
+       {"route": "/path", "description": "..."},
+       {"location": "project sidebar → Partners section", "base_route": "/project/:id", "description": "..."}
+     ],
+     "verification_passed": true
    }
    ```
+
+   Before returning, verify each file in `files_written`:
+   - `wc -c <file>` — must be > 0 bytes.
+   - `grep -c "slug:" <file>` — front-matter sentinel must be present.
+   If either check fails: set `verification_passed: false`, list the
+   failed file in the JSON, and do NOT claim success.
    ```
 
-5. **After each call**, verify the files exist on disk. If missing, mark
-   this article as `pending` in state, warn user, continue with the next.
+5. **After each call**, check `verification_passed` in the returned JSON.
+   If `false` or missing, mark this article as `pending` in state, warn
+   user, continue with the next.
 
 6. **Update state.md** after each article (incremental — survives crash):
    - bump `drafted` count

@@ -106,5 +106,7 @@ the sub-agent picks slug language based on `{lang}` from state.
 - **Too few** (<8): under-fragmented. Probably a small repo OR the agent was
   too conservative. Show to user and offer to "split-all" via phase 3 actions.
 - **Capability with 0 articles**: shouldn't happen, but if it does, add a
-  default introducao article matching the capability's slug/title.
+  default intro article using the `{lang}`-equivalent slug for "overview" or
+  "introduction" (e.g. `overview` in en, `introducao` in pt-BR, `descripcion`
+  in es) with `is_intro: true`, matching the capability's slug/title.
 - **Jornadas referencing slugs that don't exist**: validate refs, drop broken ones.

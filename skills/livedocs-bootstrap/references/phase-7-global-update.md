@@ -11,9 +11,17 @@ removing provisional answers and updating sections that depended on them.
 > current content + relevant Q&A, rewrites via Write, returns only the
 > JSON summary. You (orchestrator) update state.md.
 
-1. **Identify affected guides:** group answered questions by their origin
-   guide (or guides — some questions originated from multiple). Result:
+1. **Identify affected guides:** group answered questions by their
+   `canonical_origins` list (each canonical may have multiple origin guides
+   after Phase 6 dedup merged questions from different capabilities). Result:
    a set of `(guide_slug, list_of_qa_pairs)`.
+
+1.5. **Check for pending proposed diffs:** read state field
+   `proposed_diffs_review`. If `"during_phase_7"`, read
+   `.livedocs/triage/proposed/` and merge any diff for a capability into
+   that capability's sub-agent prompt (see Step 2). If `"before_phase_6"`
+   (user already reviewed them manually), skip this step. If the field is
+   absent (Phase 5.5 did not run or produced no diffs), skip.
 
 2. **For each affected guide, spawn a sub-agent:**
 
@@ -37,6 +45,12 @@ removing provisional answers and updating sections that depended on them.
 
    ## Maintainer answers to incorporate
    <list of Q&A pairs relevant to this guide, in `{lang}`>
+
+   ## Proposed diff to apply (if present)
+   If a `.livedocs/triage/proposed/{capability_slug}.diff` exists for this
+   guide's capability, read it and apply the changes alongside the Q&A
+   answers. Treat it as a confirmed correction (it was evidenced from code
+   in Phase 5.5). If absent or empty, skip this section.
 
    ## Rules
 
