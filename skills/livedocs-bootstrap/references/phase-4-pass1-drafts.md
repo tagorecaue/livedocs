@@ -1,23 +1,23 @@
-# Phase 4 — Pass 1: Isolated Drafts
+# Phase 4 — Draft (isolated, per topic)
 
 ## Goal
-For each article + journey in the approved taxonomy, write the FIRST draft of
-both `<slug>.md` (product flavor) and `<slug>.tech.md` (technical flavor).
-Each draft happens in **isolated context** — the agent only sees: the
-guidance, the menu index (titles only, no bodies), the article's code anchors,
-and the style.
+For the **current topic** (one capability or journey), write the FIRST draft of
+both `<slug>.md` (product flavor) and `<slug>.tech.md` (technical flavor) for
+each of its articles. Each draft happens in **isolated context** — the agent only
+sees: the guidance, the menu index (titles only, no bodies), the article's code
+anchors, and the style.
 
-This is the most expensive phase. Default to **batch-by-capability** to let
-the user evaluate quality and budget.
+Scope is ONLY this topic's articles. Offer to draft them one at a time so the
+user can check quality before paying for the whole topic.
 
 ## What to do
 
 > **DELEGATION**: Phase 4 is the BIG ONE for sub-agent usage. Each article
 > draft reads code files and produces ~5-20KB of markdown. Doing them in
-> your main context kills you by article 5. Rules:
+> your main context kills you. Rules:
 >
-> - Spawn ONE sub-agent per article (or in parallel batches if your
->   platform supports concurrent sub-agents).
+> - Spawn ONE sub-agent per article (one at a time, or in small parallel
+>   batches within the topic if your platform supports concurrency).
 > - Pass the full prompt template + paths it needs to read.
 > - Sub-agent uses Write tool to create the .md files directly.
 > - Sub-agent returns ONLY the JSON envelope ({files_written,
@@ -25,30 +25,31 @@ the user evaluate quality and budget.
 > - You (the orchestrator) update state.md based on the JSON — you
 >   never read the generated articles.
 >
-> This is what makes the skill scalable. 67 articles is doable; 67
-> articles in your main context is not.
+> This is what makes the skill scalable: one article per sub-agent keeps each
+> draft coherent even inside a multi-article topic.
 
-1. **Open the batch selector** (render in `{lang}`):
+1. **Confirm the topic's article list** (render in `{lang}`). The topic was
+   chosen in the selector (`references/topic-loop.md`); here you just confirm
+   how to draft its articles:
 
    ```
-   Pass 1 — generate drafts
-
-   Pending: 66 articles (17 capabilities, 5 journeys)
-   Already drafted: 1 article
+   Drafting topic: recurring-billing (3 articles)
+     1. overview
+     2. issue-charges
+     3. dunning
 
    Options:
-     [1] Generate everything pending (66 articles, ~$20–$67)
-     [2] Pick capabilities (multi-select)
-     [3] Journeys only (5 articles)
-     [4] Quit and continue later
+     [1] Draft the overview first so you can check the style, then the rest
+     [2] Draft all 3 now (~$1.50)
+     [3] Back to the topic selector
 
    What do you prefer?
    ```
 
-2. **Wait for the user's choice.** Compute the target list:
-   - "all" → all articles + journeys with status ≠ drafted
-   - "pick" → asks which capability slugs (multi-select)
-   - "journeys only" → only the journeys
+2. **Compute the target list** from the user's choice:
+   - "overview first" → draft the intro article, show it, then offer the rest
+   - "all" → all of this topic's articles
+   - "back" → return to the topic selector without drafting
 
 3. **For each target article, generate independently.** This is the part that
    benefits from sub-agents / parallel tool calls if your platform supports
@@ -87,7 +88,7 @@ the user evaluate quality and budget.
    ## Rules
 
    - You are in ISOLATED context. You don't see other articles' bodies, only titles.
-   - When you want to reference another guide, write `[TODO:link={slug}]`. Phase 5 resolves.
+   - When you want to reference another guide, write `[TODO:link={slug}]`. The on-demand Sync command resolves it later.
    - When the code doesn't reveal intent/UX/integration, register a pending question — don't invent.
    - Each pending question: { question, provisional_answer (your best guess from code), confidence (low/high) }.
    - **Language**: produce ALL user-visible prose in `{lang}` (the run
@@ -273,12 +274,12 @@ the user evaluate quality and budget.
    - append screenshot TODOs to the state's screenshot list
    - record cost (extract from your platform if possible, else estimate)
 
-7. **At the end of the batch** (render in `{lang}`):
+7. **At the end of the topic's drafts** (render in `{lang}`):
    ```
-   ✓ Batch done — 4 articles generated (total cost ~$1.40)
-   62 articles still pending. Next step:
-     - Run another Phase 4 batch
-     - Advance to Phase 5 (will stitch ONLY the 4 just drafted)
+   ✓ Drafted recurring-billing — 3 articles (total cost ~$1.50)
+   Next step:
+     - Advance to code-first triage (Phase 5.5) for this topic
+     - Draft remaining articles first (if you went one at a time)
      - Quit
 
    What do you prefer?
@@ -289,12 +290,12 @@ the user evaluate quality and budget.
 - **Article writes nothing on disk**: agent claimed `files_written` but they're
   not there. Mark `pending`, warn, continue.
 - **Article gets HUGE**: if a tech.md goes >50KB, it's probably padded. Note
-  it for phase 5 review.
+  it for the triage review.
 - **Cost runs away**: total > 2x estimate → pause, summarize for user, ask
   to continue or stop.
-- **User abandons mid-batch**: state.md must be up-to-date. Re-invocation
-  resumes correctly.
+- **User abandons mid-topic**: state.md must be up-to-date. Re-invocation
+  resumes the topic correctly.
 - **Sibling articles get cross-referenced**: that's why we use TODO:link
-  placeholders. Don't try to write real links here — phase 5's job.
+  placeholders. Don't write real links here — the Sync command resolves them.
 - **is_intro article doesn't link to siblings**: re-prompt or patch. Intro
   articles MUST have outbound TODO:link to all siblings.

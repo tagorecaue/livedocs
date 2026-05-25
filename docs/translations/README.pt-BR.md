@@ -27,37 +27,55 @@ para o usuário final) e um **guia técnico** (com referências
 `arquivo:linha`, para devs). Os dois ficam dentro do próprio
 repositório. Sem nuvem obrigatória, sem lock-in.
 
-## Como funciona, em 5 passos
+## Como funciona
 
+O LiveDocs documenta o seu projeto **um tópico de cada vez** — nunca tudo
+de uma vez. Primeiro um setup único, depois um loop que você conduz: você
+escolhe um tópico, o agente leva ele do começo ao fim, e então sugere o
+próximo.
+
+**Setup único — monte o mapa**
 1. **Lê o repo, propõe uma taxonomia.** Constrói um grafo semântico
    do código (usando o
    [graphify](https://github.com/safishamsi/graphify) — a
    ferramenta open source MIT do Safi Shamsi para gerar grafos de
-   conhecimento), deriva categorias e artigos. Você aprova.
+   conhecimento), deriva categorias e artigos. Você aprova. A taxonomia
+   é o mapa; ela continua editável conforme você avança.
    → [Phase 1](../../skills/livedocs-bootstrap/references/phase-1-scan.md),
    [2](../../skills/livedocs-bootstrap/references/phase-2-taxonomy.md),
    [3](../../skills/livedocs-bootstrap/references/phase-3-review.md)
 
-2. **Escreve cada artigo em paralelo, em duas versões pareadas.**
-   Versão de produto (sem jargão) + versão técnica (com refs
-   `arquivo:linha`). Marca onde precisa de screenshot. Registra cada
-   pergunta que o código sozinho não resolve.
-   → [Phase 4](../../skills/livedocs-bootstrap/references/phase-4-pass1-drafts.md)
+**Loop de tópicos — repete por tópico, você escolhe cada um**
+2. **Escolha um tópico; o agente escreve os artigos dele** em duas versões
+   pareadas — versão de produto (sem jargão) + versão técnica (com refs
+   `arquivo:linha`). Telas internas ou deprecadas simplesmente nunca são
+   escolhidas, então nunca poluem a documentação.
+   → [Loop de tópicos](../../skills/livedocs-bootstrap/references/topic-loop.md),
+   [Phase 4](../../skills/livedocs-bootstrap/references/phase-4-pass1-drafts.md)
 
-3. **Faz cross-link entre artigos, deduplica e roda triagem
-   code-first** em cada pergunta pendente. Só o que realmente precisa
-   de humano chega até você.
-   → [Phase 5](../../skills/livedocs-bootstrap/references/phase-5-pass2-stitching.md),
-   [5.5](../../skills/livedocs-bootstrap/references/phase-5.5-triage.md)
+3. **Triagem code-first** de cada pergunta pendente daquele tópico. Só o
+   que realmente precisa de humano sobrevive.
+   → [Phase 5.5](../../skills/livedocs-bootstrap/references/phase-5.5-triage.md)
 
-4. **Entrevista você no chat** com o que sobreviveu da triagem,
-   agrupado por tema (significado / transições / invariantes /
-   UX-suporte / bordas de código / direção). Cada pergunta mostra
-   o palpite do agente + nível de confiança.
+4. **Uma entrevista focada e ciente de cobertura** sobre aquele único
+   tópico. Responda tudo de uma vez se quiser — depois de cada resposta o
+   agente re-verifica toda pergunta em aberto pelo que você já cobriu
+   (totalmente / parcialmente / nada), confirma em lote as que estão
+   resolvidas, e sempre re-pergunta as parciais. Nada importante é pulado
+   em silêncio.
    → [Phase 6](../../skills/livedocs-bootstrap/references/phase-6-refinement.md)
 
-5. **Reescreve apenas os artigos afetados** pelas suas respostas.
+5. **Reescreve os artigos afetados daquele tópico** a partir das suas
+   respostas, faz commit, e volta ao seletor para o próximo tópico.
    → [Phase 7](../../skills/livedocs-bootstrap/references/phase-7-global-update.md)
+
+**Sob demanda — sincronize toda a documentação**
+6. **Sincronizar a documentação** reconcilia tudo que cruza tópicos —
+   cross-links, glossário, "o que ler em seguida", detecção de conteúdo
+   defasado — sobre todo o corpus, sempre que você pedir. Nunca roda dentro
+   do loop, então fechar um tópico nunca força edições em tópicos já
+   concluídos.
+   → [Sync](../../skills/livedocs-bootstrap/references/sync-flow.md)
 
 Run real: 76 artigos + 6 jornadas, ~US$ 110 em gasto de LLM,
 ~4h de tempo humano. Detalhamento completo no

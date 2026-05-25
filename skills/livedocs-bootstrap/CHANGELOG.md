@@ -15,6 +15,51 @@ history.
   companion skill `livedocs-setup` (v1.0.0) checks for `graphify`
   and installs it via `uv` or `pipx` on first run.
 
+## [2.0.0] — 2026-05-24
+
+### Changed (BREAKING — state schema + flow model)
+- **Incremental-by-topic is now the only model.** The "document everything at
+  once" bulk mode is removed. Init/Map (Phases 0–3) runs once to build the
+  taxonomy map; then a per-topic loop documents one capability/journey at a
+  time (Phase 4 → 5.5 → 6 → 7 → commit → back to selector). Driven by three
+  real-run failures of bulk mode: diluted article richness, per-topic nuance
+  lost to a global question dedup, and internal-only/deprecated screens swept
+  into user docs. The topic selector lets the maintainer pick each topic, so
+  junk never enters; it always suggests a next topic with a signal-based reason.
+  New reference: `references/topic-loop.md`.
+- **Cross-referencing is now an on-demand `sync` command, not a phase.** The old
+  Phase 5 (Pass 2 stitching) is removed from the linear flow and re-homed in
+  `references/sync-flow.md`. Sync owns everything that spans topics: bidirectional
+  cross-links, glossary consolidation, per-domain "next" recommendations, stale
+  detection, taxonomy drift. It runs over the whole corpus when the user asks
+  ("sincronizar a documentação" / "sync docs"), so closing one topic never forces
+  edits to topics already done. `references/phase-5-pass2-stitching.md` deleted.
+- **Phase 6 is coverage-aware and per-topic.** Removed the project-wide two-pass
+  dedup, cross-batch reconciliation, and the `canonical_id`/`merged_ids` machinery
+  (no longer needed at topic scale). Each block opens with a free-form question;
+  after every answer a coverage pass classifies each still-open question as
+  fully / partially / untouched (with a quoted span + explicit inferred answer).
+  High-confidence full coverage is batch-confirmed; low confidence is always
+  asked; partial is always re-asked for the gap; invariants and integration
+  failure modes always get explicit confirmation. Answers record an audit trail
+  (`answered_via`, `inferred_answer`, `covering_span`, `user_confirmed`).
+- **State schema reworked.** `state.md` no longer has a single global "Current
+  phase". It tracks Init/Map completion plus a per-topic status table
+  (`not-started → drafted → triaged → interviewed → updated → done`), a
+  next-topic recommendation, current-topic pending questions only, and a sync
+  log. Older v1.x `state.md` files do not resume cleanly — start a fresh run.
+- **Phase 4 / 5.5 / 7 are now topic-scoped.** Phase 4 drafts only the selected
+  topic's articles (one at a time offered); Phase 5.5 triages per article-pair;
+  Phase 7 updates only the topic's affected articles and ends with a
+  topic-complete message that returns to the selector (not a project-wide
+  "bootstrap complete").
+
+### Migration
+- v1.x runs mid-flight can't be resumed by v2.0 (state schema changed). Finish
+  on v1.x or re-run setup. Generated `docs/` articles remain valid; the article
+  `status` enum changed to `drafted | triaged | interviewed | updated | done |
+  stale` — run `sync` to reconcile links and statuses.
+
 ## [1.3.1] — 2026-05-23
 
 ### Fixed

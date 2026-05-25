@@ -2,9 +2,10 @@
 
 ## Why
 Pending questions are how the agent acknowledges what it doesn't know
-without inventing answers. They get batched and asked to the user in
-Phase 6 — but **only after Phase 5.5 (code-first triage) filters out
-the ones the agent could have answered by reading the code harder.**
+without inventing answers. They are asked to the user during the topic's
+Phase 6 interview — but **only after Phase 5.5 (code-first triage) filters out
+the ones the agent could have answered by reading the code harder.** Each
+question belongs to one topic; there is no project-wide pooling.
 
 ## Guiding principle
 
@@ -130,13 +131,17 @@ Inside `.livedocs/state.md`, in the "Pending questions" section. Format:
    only). When the question is answered, the 🟡 marker is removed
    and the actual answer replaces the provisional content.
 
-5. **Origin matters.** Multiple guides can hit the same question. Origin
-   is a list. After dedup in Phase 6, merged questions inherit the
-   canonical's origins for tracking.
+5. **Origin matters.** Multiple articles within a topic can hit the same
+   question. Origin is a list. If two near-duplicate questions are merged
+   inline during the topic's interview, the survivor inherits both origins for
+   tracking. (There is no project-wide dedup — questions stay within their
+   topic.)
 
-6. **Confidence guides UX.** During Phase 6 interview, `confidence:
+6. **Confidence guides UX.** During the Phase 6 interview, `confidence:
    high` questions get prefaced with "I'm fairly sure of this — confirm?"
-   and `confidence: low` with "Couldn't infer from code:".
+   and `confidence: low` with "Couldn't infer from code:". The coverage-aware
+   pass also uses confidence: high+fully-covered is batch-confirmed, low is
+   always asked explicitly (see `phase-6-refinement.md`).
 
 7. **Stay aware of Phase 5.5.** Sub-agents in 5.5 will filter your
    questions. If you systematically generate 🚫-pattern questions, the

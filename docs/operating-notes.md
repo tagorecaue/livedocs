@@ -25,13 +25,15 @@ the skill and offer a re-pass. See the
 
 ## Cost ranges
 
-Driven by the agent's LLM provider. Observed across real runs:
+Driven by the agent's LLM provider. Observed across real runs. Because the
+skill documents one topic at a time, cost is spread across sessions, not
+front-loaded:
 
-- Phase 4 (draft): **$0.30–$1.00 per article** (3× variance with capability size)
-- Phase 5 (stitch): **$0.50–$3.00 per capability**
-- Phase 5.5 (triage): **$0.20–$1.50 per capability**
-- Phase 6 (dedup + interview): ~$0.50–$2 dedup; ~$0.05 per Q in chat
-- Phase 7 (rewrite): **$0.30–$0.80 per affected article**
+- Phase 4 (draft): **$0.30–$1.00 per article** (3× variance with topic size)
+- Phase 5.5 (triage): **$0.20–$1.50 per article-pair**
+- Phase 6 (interview): ~$0.05 per question in chat; intra-topic dedup, if any, is one inline call
+- Phase 7 (topic update): **$0.30–$0.80 per affected article**
+- Sync (on-demand cross-corpus): scales with corpus size; run occasionally
 
 Real cost gets recorded in `.livedocs/state.md`. Don't promise users
 a fixed estimate — measure with your own project first.
@@ -66,12 +68,16 @@ Full policy: [`references/privacy.md`](../skills/livedocs-bootstrap/references/p
 
 - **No publication** — generates local markdown only. Pushing to
   Chatwoot / other help centers is planned, not built.
-- **No incremental maintenance** — bootstrap is one-shot today.
-  Re-running starts a new full run rather than diffing against the
-  previous one. Maintenance mode is planned.
+- **Sync is manual** — cross-links, glossary, and "next" recommendations are
+  reconciled by an on-demand `sync` command, not automatically after each
+  topic. This is by design (you control when links get drawn), but it means a
+  freshly documented topic has no cross-links until you run sync.
+- **Stale detection flags, doesn't fix** — sync marks guides whose source
+  changed as `stale`; re-documenting them is a manual topic-loop decision.
+  Full incremental maintenance (diffing against the previous run) is planned.
 - **Cost variability across LLMs** — Sonnet-class and Opus-class
   models produce noticeably better drafts than smaller ones; the
   skill's quality follows the agent's quality.
 - **`is_intro` heuristic** — Phase 4 sometimes generates an overview
-  article for small capabilities that don't need one. Remove via
-  Phase 3 before Phase 4 starts.
+  article for small topics that don't need one. Remove via Phase 3
+  before documenting the topic.

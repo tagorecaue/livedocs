@@ -11,6 +11,19 @@ rodando no Opus 4.7 da Anthropic. Wall-clock total: aproximadamente
 uma semana de trabalho, na maior parte acompanhada; as partes longas
 foram do tipo "deixa rodando e volta depois do jantar".
 
+> **Nota (v2.0):** esse run foi feito no **modelo bulk da v1.x** — scan,
+> depois rascunhar *tudo*, depois um stitch/dedup global, depois uma única
+> entrevista gigante. Ele é mantido aqui porque é a evidência que motivou o
+> redesign da v2.0: documentar todos os 76 artigos de uma vez diluiu a
+> riqueza deles, o dedup global de perguntas colapsou a nuance por tópico, e
+> o scan varreu para dentro telas internas e deprecadas que não deveriam ter
+> sido documentadas. A v2.0 substituiu isso pelo **loop incremental por
+> tópico** (um tópico de cada vez, o mantenedor escolhe cada um) mais um
+> **sync** sob demanda para cross-links. Os números por fase abaixo ainda
+> ilustram o custo por artigo/por pergunta; basta ler "Phase 5 stitch" como
+> trabalho que agora vive no `sync`, e a "única entrevista gigante" como
+> trabalho agora dividido em entrevistas focadas por tópico.
+
 ## Detalhamento por fase
 
 | Phase | O que o agente fez | Números deste run |
@@ -20,7 +33,7 @@ foram do tipo "deixa rodando e volta depois do jantar".
 | 2 — Taxonomy | Propôs 22 capabilities + 6 journeys a partir dos sinais | 1 chamada de LLM, ~US$ 0,40 |
 | 3 — Review | Mantenedor fez split / merge / rename via menu interativo | ~30 min de tempo humano, algumas chamadas de split |
 | 4 — Drafts | 1 sub-agente por artigo, todos em batches paralelos | 76 artigos × 2 flavors = 152 arquivos; ~US$ 74 no total |
-| 5 — Stitch | Cross-links resolvidos, terminologia harmonizada | ~US$ 20; sinalizou algumas contradições como pending questions |
+| 5 — Stitch (agora `sync`) | Cross-links resolvidos, terminologia harmonizada | ~US$ 20; sinalizou algumas contradições como pending questions |
 | **5.5 — Triage** | **Re-checou 314 pending questions contra o código** | **~120 auto-respondidas com evidência `arquivo:linha`; ~28 artigos auto-patcheados; ~150 perguntas chegaram no humano** |
 | 6 — Interview | Mantenedor respondeu as 150 em blocos temáticos (A–F) | ~3 horas de tempo humano, duas sentadas; respostas vagas aceitas e salvas |
 | 7 — Global update | Artigos afetados reabertos e reescritos com as respostas | ~US$ 15; ~30 artigos tocados |
@@ -53,6 +66,24 @@ veio daí** e agora remove a maior parte delas antes da entrevista
 começar. As perguntas que sobrevivem são genuinamente sobre
 intenção, UX, ou realidade operacional.
 
+### Documentar tudo de uma vez diluiu a qualidade e varreu lixo para dentro
+
+Esse run rascunhou todos os 76 artigos em bulk. Três problemas
+apareceram que o mantenedor só sentiu depois: (1) os artigos saíram
+**mais rasos** que os docs anteriores do autor, escritos à mão tópico
+por tópico; (2) o dedup global de perguntas **colapsou a nuance** —
+perguntas quase-duplicadas de domínios diferentes foram fundidas em uma
+única canônica, perdendo o ângulo de cada domínio; (3) o scan puxou
+para dentro **telas administrativas internas e fluxos deprecados** que
+nunca deveriam ter virado docs de usuário.
+
+**Essa é a origem do modelo incremental da v2.0.** Documentar um tópico
+de cada vez, com o mantenedor escolhendo cada tópico, mantém telas
+internas/mortas de fora e deixa a entrevista de cada tópico ir fundo. O
+trabalho cross-topic (links, glossário) foi movido para um `sync` sob
+demanda, de modo que fechar um tópico nunca força edições em tópicos já
+prontos.
+
 ### Trocar de contexto a cada pergunta mata a entrevista
 
 Perguntar "esse rótulo é `'Pending'` ou `'Em aberto'`?" logo depois
@@ -73,7 +104,7 @@ perguntas, metade do cansaço.
 
 ### Sub-agente reportando sucesso às cegas é o pior modo de falha
 
-Um sub-agente na Phase 5 escreveu um arquivo vazio, retornou
+Um sub-agente na fase de stitch escreveu um arquivo vazio, retornou
 `{"status": "ok", "files_modified": [...]}`, e o orquestrador
 avançou. O artigo aparecia normal no state mas estava vazio no
 disco. Só foi pego por sorte durante revisão.
@@ -95,12 +126,12 @@ Honestidade sobre cobertura:
 
 - **Multi-idioma** — esse foi um run só em pt-BR. O caminho em
   inglês está implementado mas é menos battle-tested.
-- **Manutenção incremental** — bootstrap foi one-shot. Re-rodar a
-  skill contra o mesmo projeto depois de mudanças no código está
-  planejado para v2.0.
+- **Manutenção incremental** — bootstrap foi one-shot. O comando `sync`
+  da v2.0 agora sinaliza guides `stale` (fonte mudou desde o scan);
+  conduzir um re-document guiado só desses está planejado para v2.1.
 - **Publicação** — o mantenedor publicou no Chatwoot manualmente a
   partir da árvore local de `docs/`. Publicação automatizada está
-  planejada para v2.0.
+  planejada para v3.0.
 - **Entrevista cross-team** — um mantenedor único respondeu tudo.
   Quebrar a entrevista entre múltiplos especialistas no domínio
   ainda não é suportado.

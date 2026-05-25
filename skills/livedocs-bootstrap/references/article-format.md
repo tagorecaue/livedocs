@@ -17,14 +17,14 @@ slug: <journey-slug>                 # for journey articles
 title: <Human readable title in {lang}>
 kind: capability                     # or "journey"
 flavor: product                      # or "tech"  (use these English values verbatim)
-status: drafted                      # drafted | stitched | refined
+status: drafted                      # drafted | triaged | interviewed | updated | done | stale
 generated_at: "2026-05-21"
 skill_version: "1.3.0"               # value from SKILL.md front-matter at generation time
 last_interview: ""                   # ISO date of last user answer affecting this guide
-source_files:                        # added during phase 4, optional
+source_files:                        # added during Phase 4, optional
   - src/projects/...
   - prisma/schema.prisma
-related_guides:                      # added during phase 5
+related_guides:                      # added during the Sync command
   - recurring-billing/issue-invoices
 ---
 ```
@@ -49,7 +49,7 @@ the sub-agent renders the actual heading in `{lang}`:
 5. **Main flows** — main flows (mermaid OK if non-trivial)
 6. **Day-to-day cases** — Q&A format: "What if I…?"
 7. **Living with neighbors** — interactions with other capabilities
-8. **See also** — cross-links to 3-5 related guides (PHASE 5 fills this)
+8. **See also** — cross-links to 3-5 related guides (the Sync command fills this)
 
 **Zero technical jargon.** No column names, no function names, no
 `UPPER_SNAKE_CASE`, no DB enum values, no route paths inline, no
@@ -78,7 +78,7 @@ Prose in `{lang}`; identifiers, file:line refs, code blocks unchanged.
 6. **UI / colors / badges** — only when visual design matters semantically
 7. **Pending items and known gaps** — 🟡 hypotheses, missing tests, refactor opportunities
 8. **Reference material** — links to repos, docs, ADRs
-9. **See also** — cross-links to related tech guides (PHASE 5 fills this)
+9. **See also** — cross-links to related tech guides (the Sync command fills this)
 
 Use `file:line` or `file:line-line` citations liberally. Every numbered
 invariant rule should cite its source.

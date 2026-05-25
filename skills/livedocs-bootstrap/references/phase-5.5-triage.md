@@ -15,8 +15,10 @@ the article** that was written without that information.
 > Removing the question without fixing the article leaves the gap
 > silent. This phase fixes both ends.
 
-This phase runs **between Phase 5 (stitching) and Phase 6 (interview)**,
-**not as a substitute for either**.
+This phase runs **inside the topic loop, after Phase 4 (draft) and before
+Phase 6 (interview)**, scoped to the CURRENT topic only. There is no global
+stitching phase anymore — cross-linking is the on-demand Sync command
+(`references/sync-flow.md`).
 
 ---
 
@@ -26,8 +28,8 @@ This phase has sub-agents writing into existing article files. Without
 the safeguards below, a faulty sub-agent can zero a file and report
 success.
 
-- **Commit-per-capability discipline** (Core principle #11). One commit
-  per capability after this phase processes it. Allows selective revert.
+- **Commit-per-topic discipline** (Core principle #11). One commit after this
+  phase processes the topic. Allows selective revert.
 - **Post-edit verification** (Core principle #12). Every write must be
   followed by `wc -c` > 0 + sentinel grep + diff readback. Return
   `verification_passed: true|false` in the sub-agent JSON.
@@ -41,23 +43,24 @@ user and proceed to Phase 6 with the unfiltered backlog instead.
 
 ## What to do
 
-### Step 1 — Group questions by capability
+### Step 1 — Collect this topic's questions
 
-Read pending questions from state. Group by origin capability (use
-first segment of `origin` slug, e.g. `project-management/create-project`
-→ capability `project-management`).
+Read the current topic's pending questions from state. They all belong to this
+one topic (capability or journey); no cross-topic grouping needed.
 
-### Step 2 — Spawn one sub-agent per capability
+### Step 2 — Spawn one sub-agent per article-pair
 
-In parallel (respecting `delegate_task` concurrency limits), spawn one
-sub-agent per capability with the prompt below. Each sub-agent owns its
-capability's questions AND its capability's article files.
+Within the topic, group questions by the article they originate from (the
+`{slug}.md` + `{slug}.tech.md` pair). Spawn one sub-agent per article-pair
+(batch sizing: one pair per sub-agent — a capability-wide sub-agent can time out
+when a topic has many questions). Each sub-agent owns its article-pair's
+questions AND those two files.
 
 #### Sub-agent prompt template
 
 ````
 # Phase 5.5 — Code-first triage + article audit
-# Capability: {capability_slug}
+# Topic: {topic_slug}  ·  Article-pair: {article_slug}
 
 ## Your job
 
@@ -90,9 +93,9 @@ For each pending question listed below, you must:
 ## Inputs
 
 - Pending questions: {list of Q objects from state}
-- Article files (read AND write):
-  - docs/<capabilities-dir>/{capability_slug}/*.md
-  - docs/<capabilities-dir>/{capability_slug}/*.tech.md
+- Article files (read AND write) — ONLY this article-pair:
+  - docs/<capabilities-dir>/{topic_slug}/{article_slug}.md
+  - docs/<capabilities-dir>/{topic_slug}/{article_slug}.tech.md
 - Codebase: read-only access via grep/read tools.
 
 ## Process for each question
@@ -124,7 +127,8 @@ For each pending question listed below, you must:
 
 ```json
 {
-  "capability": "{capability_slug}",
+  "topic": "{topic_slug}",
+  "article": "{article_slug}",
   "stats": {
     "questions_input": 47,
     "answered_by_code": 28,
@@ -192,18 +196,18 @@ For each pending question listed below, you must:
 
 ````
 
-### Step 3 — Per-capability commit
+### Step 3 — Per-topic commit
 
-After each sub-agent returns:
+After all the topic's article-pair sub-agents return:
 
-1. Apply any pending writes the sub-agent emitted (it did this itself —
+1. Apply any pending writes the sub-agents emitted (they did this themselves —
    verify with `git status`).
-2. Read its JSON. Update state with new question statuses.
-3. Save proposed diffs to `.livedocs/triage/proposed/{capability_slug}.diff`.
+2. Read their JSON. Update state with new question statuses.
+3. Save proposed diffs to `.livedocs/triage/proposed/{topic_slug}.diff`.
 4. Commit:
 
    ```
-   git commit -m "phase-5.5: auto-fix from code (cap=<slug>)" \
+   git commit -m "phase-5.5: auto-fix from code (<topic>)" \
      -m "Answered <N> questions from code, patched <M> articles,
          proposed <P> diffs for review.
          Aligned: <A>, divergent fixed: <D>, missing added: <X>."
@@ -274,8 +278,8 @@ Record the user's choice in state under `proposed_diffs_review: "before_phase_6"
 ## Pitfalls
 
 - **Sub-agent finds answer but applies wrong patch.** Mitigation:
-  per-capability commit allows `git revert <sha>` of a single
-  capability's worth of changes.
+  per-topic commit allows `git revert <sha>` of a single topic's
+  worth of changes.
 - **Sub-agent hits an environment break (corrupted PATH, missing tool)**
   and loops trying to read files. Mitigation: anti-loop guard aborts
   after 2 same-error retries.
@@ -284,7 +288,7 @@ Record the user's choice in state under `proposed_diffs_review: "before_phase_6"
   field in the JSON describing what it DID find, so the human enters
   Phase 6 with that context.
 - **Two questions touch the same article line**: sub-agent processes
-  questions sequentially within a capability; each `read → patch →
+  questions sequentially within an article-pair; each `read → patch →
   verify` is atomic. Later question reads the already-patched article.
 - **Aligned count looks wrong / suspiciously high.** Sub-agent might be
   rubber-stamping. Sanity check: spot-check a couple of `aligned`
@@ -309,5 +313,5 @@ signal of Phase 4 quality. Track it across executions:
   examining the Phase 4 prompt for "fill the gap" style instructions
   that encourage hallucination.
 
-Persist `aligned_ratio` per capability to state so trends are visible
+Persist `aligned_ratio` per topic to state so trends are visible
 across reruns / partial regenerations.

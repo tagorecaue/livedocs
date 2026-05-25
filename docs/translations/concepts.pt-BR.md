@@ -47,6 +47,34 @@ outros guides do mesmo flavor. Eles descrevem a mesma coisa para
 audiências diferentes; linká-los cria um loop que não adiciona
 valor e confunde o leitor sobre em qual flavor está.
 
+## Incremental por tópico — uma capability por vez
+
+O LiveDocs documenta um projeto **um tópico por vez**, nunca tudo
+de uma vez. Depois de um setup único (guidance, scan de código,
+taxonomia), a pessoa que mantém escolhe uma única capability ou
+journey e o agente a leva de ponta a ponta — draft, triagem
+code-first, entrevista, reescrita — e então retorna sugerindo o
+próximo tópico.
+
+Isso é uma escolha deliberada, aprendida em runs reais onde a
+abordagem de "documentar tudo de uma vez" falhou de três jeitos:
+diluiu a riqueza dos artigos, colapsou a nuance de cada tópico
+durante um dedup global de perguntas, e arrastou para dentro
+screens internas e deprecated que jamais deveriam ter virado docs
+de usuário. Deixar a pessoa que mantém escolher cada tópico mantém
+o lixo de fora e a profundidade dentro.
+
+A visão global que a abordagem em massa oferecia não se perde: o
+code graph mais a taxonomia do setup dão ao agente sua visão geral
+sem precisar draftar nada.
+
+O trabalho que atravessa tópicos — cross-links, o glossário
+compartilhado, recomendações de "o que ler em seguida", detectar
+guides que ficaram desatualizados — **NÃO** acontece dentro do loop
+por tópico. Ele roda como um comando **sync** separado e sob
+demanda sobre o corpus inteiro, de modo que fechar um tópico nunca
+força edições em tópicos já concluídos.
+
 ## Pending questions, em vez de interrupção
 
 Quando o agente acha algo que o código não revela (intenção,
@@ -55,18 +83,23 @@ pausa e interrompe o usuário. Ele registra uma **pending question**,
 escreve um palpite provisório no draft com flag de confiança, e
 segue.
 
-As perguntas acumulam durante Phase 4 e Phase 5. A Phase 5.5
-checa cada uma contra o código, respondendo automaticamente as
-que têm evidência literal e patcheando o artigo que deveria ter
-tido a resposta. O que sobreviver chega na Phase 6 — uma entrevista
-única em lote, organizada em blocos temáticos (significado /
-transições / invariantes / UX-e-suporte / bordas de código /
-direção).
+As perguntas acumulam durante o draft de um tópico. A triagem
+code-first do tópico recheca cada uma contra o código, respondendo
+automaticamente as que têm evidência literal e patcheando o artigo
+que deveria ter tido a resposta. O que sobreviver chega na
+entrevista — escopada para aquele único tópico, em blocos temáticos
+(significado / transições / invariantes / UX-e-suporte / bordas de
+código / direção).
 
-O custo de fazer o humano trocar de contexto ("responde isso
-agora") é maior que o custo de uma fase extra. Entrevistas em lote
-também se beneficiam de dedup cross-pergunta — uma resposta
-geralmente resolve várias.
+A entrevista é **consciente de cobertura** (coverage-aware): o
+usuário pode responder em um único despejo livre e, após cada
+resposta, o agente recheca toda pergunta ainda em aberto para ver
+se aquela resposta já a cobriu — total, parcial ou nada. As que
+ficaram totalmente cobertas com alta confiança são confirmadas em
+lote (mostrando o que foi inferido); as parcialmente cobertas são
+sempre re-perguntadas pela parte que falta; nada importante é
+silenciosamente marcado como respondido. O custo de fazer o humano
+trocar de contexto é maior que o custo de uma checagem extra.
 
 ## Contexto isolado por draft
 
@@ -78,8 +111,9 @@ Nada mais. Sem "toda a documentação no prompt" globalmente.
 Duas razões: **custo** (prompts que crescem com N artigos ficam
 caros rápido) e **coerência** (a atenção de uma LLM degrada quando
 ela tem que manter todos os outros artigos na cabeça enquanto
-escreve esse). Cross-linking acontece depois, na Phase 5, onde o
-input é um índice curto em markdown, não código bruto.
+escreve esse). O cross-linking acontece depois, durante o passe
+**sync** sob demanda, onde o input é um índice curto em markdown,
+não código bruto.
 
 ## Texto de guidance + ponto de captura do código
 

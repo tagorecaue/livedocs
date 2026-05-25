@@ -113,19 +113,23 @@ When merging A into B:
 ### Action: approve (`[a]`)
 
 Set `approved_at` to current ISO timestamp in `.livedocs/taxonomy.json`.
-Update state.md to mark phase 3 done.
+Update state.md to mark Init/Map done (phase 3 complete).
 
 Show summary (illustrative; render in `{lang}`):
 ```
-✓ Taxonomy approved: 22 capabilities, 5 journeys
-Total articles to generate in Phase 4: 67
+✓ Taxonomy approved: 22 capabilities, 5 journeys (27 topics)
 
-Estimated Phase 4 cost (pass 1):
-  - $0.30–$1.00 per article × 67 = $20–$67 (varies with capability size)
-  - Can run in batches — see Phase 4 menu
+This is the MAP. We don't document everything now — we go one topic at a
+time, you pick each one. Per-topic cost is roughly:
+  - $0.30–$1.00 per article to draft, + light triage/interview/update
+  - You'll see an estimate before each topic, and pay only for what you pick
+
+The taxonomy stays editable: you can add a topic later if we discover one
+that's missing.
 ```
 
-Ask consent to advance to Phase 4.
+Then load `references/topic-loop.md` and open the topic selector — it will
+suggest a first topic. Don't auto-draft anything; the user picks.
 
 ## Pitfalls
 

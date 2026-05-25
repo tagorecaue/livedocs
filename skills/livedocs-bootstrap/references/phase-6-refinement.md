@@ -1,199 +1,200 @@
-# Phase 6 — Refinement Interview
+# Phase 6 — Coverage-aware refinement interview (per topic)
 
 ## Goal
-Get human answers for the questions that survived **Phase 5.5 code-first
-triage** — i.e. only questions that genuinely require product intent,
-operational reality, or tribal knowledge.
 
-> Prerequisite: Phase 5.5 must have run. Questions reaching Phase 6 have
-> `status: needs_human`. Questions with `status: answered_by_code` are
-> already resolved with file:line evidence and never reach the user.
+Get human answers for the questions that survived **Phase 5.5 code-first
+triage** — only questions that genuinely require product intent, operational
+reality, or tribal knowledge — for **the current topic only**.
+
+> Scope: ONE topic. This runs inside the topic loop (`references/topic-loop.md`).
+> The questions here belong to the topic being documented, nothing else. There
+> is no project-wide dedup, no two-pass reconciliation. A topic has a handful of
+> surviving questions, not hundreds.
+
+> Prerequisite: Phase 5.5 ran for this topic. Questions reaching Phase 6 have
+> `status: needs_human`. Questions with `status: answered_by_code` are already
+> resolved with file:line evidence and never reach the user.
+
+## Why coverage-aware
+
+The user often finds it easier to give one big answer than to answer many small
+questions — and a single rich answer frequently resolves several pending
+questions at once. The risk: if the agent marks questions "answered" by loose
+association, a **nuance gets lost** and an important question is never asked.
+
+The antidote: **coverage is never binary.** After every answer, each still-open
+question is re-checked and classified into THREE buckets — fully, partially, or
+not covered — with evidence. Partial coverage is always followed up; high-stakes
+questions always get explicit confirmation. This is the mechanism that lets the
+user "dump" a big answer without silently dropping anything.
 
 ## Structure of the interview
 
-The interview is organized in **thematic blocks A–F**, not by capability.
-Same theme = same mental mode for the user, lower fatigue, faster pace.
+Organized in **thematic blocks A–F**, not by article. Same theme = same mental
+mode for the user, lower fatigue.
 
 | Block | Theme | Example questions |
 |---|---|---|
-| **A** | **Product meaning / glossary** | "What does status X mean in business terms?" "Are 'commission' and 'payout' interchangeable in your vocabulary?" |
-| **B** | **Transitions and triggers** | "Who fires A → B? Cron? Webhook? Manual?" "What event causes the contract to leave `pending`?" |
-| **C** | **Invariants and constraints** | "Can two records of type X exist active at the same time?" "Is there a hard limit on the renegotiation chain?" |
-| **D** | **User experience and support** | "Top 3 most common support questions about screen S?" "Does the operator understand this copy?" |
-| **E** | **Code-suggested edges** | "Code suggests X but doesn't confirm — is rollback transactional here?" "Race condition between two writers — intentional?" |
-| **F** | **Direction of the guide (meta)** | "Right depth?" "Anything obvious I missed?" "What guide next?" |
+| **A** | **Product meaning / glossary** | "What does status X mean in business terms?" |
+| **B** | **Transitions and triggers** | "Who fires A → B? Cron? Webhook? Manual?" |
+| **C** | **Invariants and constraints** | "Can two records of type X be active at once?" |
+| **D** | **User experience and support** | "Top 3 support questions about screen S?" |
+| **E** | **Code-suggested edges** | "Code suggests X but doesn't confirm — is rollback transactional?" |
+| **F** | **Direction of the guide (meta)** | "Right depth? Anything obvious I missed?" |
 
-Block F is **always present**, regardless of content, as the closing
-section. It captures user feedback about the guide itself.
+Block F is **always present** as the closing section.
 
 ---
 
 ## What to do
 
-### Step 1 — Load questions
+### Step 1 — Load this topic's questions
 
-Read `.livedocs/state.md`. Check whether Phase 5.5 ran:
-- **Phase 5.5 ran** (state shows `[x] 5.5 — Code-first triage`): filter
-  `status == "needs_human"`. If none, skip Phase 6 and tell the user that
-  Phase 5.5 resolved everything from code.
-- **Phase 5.5 was skipped**: filter `status in ("needs_human", "open")`.
-  All unresolved questions go to the interview regardless of status.
+Read the in-progress topic's pending questions from `.livedocs/state.md`.
+Filter `status == "needs_human"`. If Phase 5.5 was skipped (it shouldn't be),
+include `status == "open"` too — never silently drop open questions.
 
-Never silently drop `status == "open"` questions when 5.5 was not run.
+If there are none, tell the user Phase 5.5 resolved everything from code for
+this topic and skip to Phase 7.
 
-### Step 2 — Dedup (two-pass when N is large)
+### Step 2 — Classify into blocks A–F
 
-**If N ≤ 80 questions:** single dedup call.
+For a topic's handful of questions, classify inline (no sub-agent needed):
+assign each question a block letter A–F. Save the block on each question in
+state. If a question has no clear block, default to **E**.
 
-**If N > 80:** two-pass thematic dedup.
+### Step 3 — Open each block with a free-form question FIRST
 
-#### Two-pass dedup algorithm
-
-> When you have hundreds of pending questions across many capabilities,
-> a single dedup call times out and quality degrades. Split first by
-> theme (intra-batch), then reconcile across batches (cross-batch).
-
-**Pass 1 — intra-batch (parallel, ≤80 questions per sub-agent):**
-
-Split questions into thematic batches by **origin capability** (or by
-emerging topic when capabilities don't cluster cleanly). Each batch
-goes to one sub-agent.
-
-Prompt template per sub-agent:
-
-> Below are N pending questions from a single thematic group during
-> documentation generation. Group equivalent or near-equivalent questions
-> into clusters. For each cluster, pick a canonical question (rewrite
-> if a better phrasing helps) and list the IDs being merged.
->
-> Output JSON:
-> ```json
-> {
->   "clusters": [
->     {
->       "canonical_id": "Q3",
->       "canonical_question": "...",
->       "canonical_origins": ["billing/invoices", "project-management/create-project"],
->       "canonical_confidence": "low|high",
->       "canonical_provisional_answer": "...",
->       "merged_ids": ["Q7", "Q11"]
->     }
->   ]
-> }
-> ```
->
-> **Critical rule:** `canonical_id` MUST NOT appear inside its own
-> `merged_ids`. Singletons (no duplicates) have `merged_ids: []`.
-
-Example correct output (mix of singleton and real cluster):
-
-```json
-{
-  "clusters": [
-    // Singleton — Q5 has no duplicates
-    {
-      "canonical_id": "Q5",
-      "canonical_question": "...",
-      "merged_ids": []
-    },
-    // Real cluster — Q3 absorbs Q7 and Q11; Q3 does NOT appear in merged_ids
-    {
-      "canonical_id": "Q3",
-      "canonical_question": "...",
-      "merged_ids": ["Q7", "Q11"]
-    }
-  ]
-}
-```
-
-Example INCORRECT output (do not produce):
-
-```json
-{
-  "canonical_id": "Q3",
-  "merged_ids": ["Q3", "Q7", "Q11"]  // ❌ canonical can't merge into itself
-}
-```
-
-**Pass 2 — cross-batch (single sub-agent):**
-
-Take all canonicals from Pass 1 (drop merged IDs) and feed to one
-sub-agent that finds cross-batch duplicates. Same JSON shape.
-
-**Reconciliation:**
-
-The orchestrator (you) combines Pass 1 and Pass 2 results via
-`execute_code` (a small Python script). Algorithm:
-
-1. Start with Pass 1 clusters.
-2. For each Pass 2 cluster that merges canonicals from different
-   Pass 1 batches: absorb those canonicals into the new canonical.
-3. **Union `canonical_origins`**: for every absorbed canonical, union its
-   `canonical_origins` list into the surviving canonical's list. Deduplicate.
-   This ensures Phase 7 routes the answer to ALL origin guides, not just
-   the canonical's original guide.
-4. Sanitize: remove any `canonical_id` that appears inside its own
-   `merged_ids` (defensive guard against the bug above).
-5. Validate invariant: each original Q appears in exactly one cluster.
-6. Sort clusters by `len(merged_ids) DESC`, then `canonical_id ASC`.
-
-Save the result to `.livedocs/cache/questions/clusters-final.json`.
-
-### Step 3 — Classify into blocks A–F
-
-After dedup, classify each canonical cluster into one of the six blocks.
-Either:
-- single LLM call with all canonicals, returning `{canonical_id: "A"|...|"F"}`, OR
-- per-cluster classification inline if N is small (<30).
-
-Save classification back into state and into `clusters-final.json` (add
-`"block": "A"|...|"F"` per cluster).
-
-### Step 4 — Export interview files (recommended for N > 50)
-
-Write one markdown file per block to `.livedocs/interview/`:
+This is the heart of the coverage-aware design. Before asking the block's
+specific questions one by one, **invite a free-form dump**:
 
 ```
-.livedocs/interview/
-├── block-a-product-meaning.md
-├── block-b-transitions-triggers.md
-├── block-c-invariants.md
-├── block-d-ux-support.md
-├── block-e-code-edges.md
-└── block-f-guide-direction.md
+Block B — Transitions & triggers (recurring-billing)
+
+I have 4 questions here, but answer however is easiest — you can describe
+the whole billing lifecycle in one go and I'll map your answer to the
+questions, or take them one at a time. Your call.
+
+(If you'd rather just see the questions: say "list".)
 ```
 
-Each file has the same skeleton (see template below). User can answer
-inline in any editor and signal "done with block X". Agent reads the
-file back to ingest answers.
+The free-form answer is the input to the coverage pass (Step 4). If the user
+prefers, they answer questions individually — then the coverage pass still runs
+after each individual answer, because one answer can resolve siblings too.
 
-For N ≤ 50, inline chat interview is fine; skip the file export.
+### Step 4 — Coverage pass after EVERY answer
 
-#### Interview file template (per block)
+After each user answer (free-form or targeted), run ONE coverage check over all
+**still-open questions of this topic**. For each open question, classify into
+exactly one of THREE buckets — never two:
 
-> The block file is rendered in `{lang}`. The skeleton below is shown in
-> English for illustration — translate every prose line, including the
-> "Resposta:" / "Answer:" marker word, while keeping the structure intact.
+- **`fully-covered`** — the answer resolves the question completely.
+- **`partially-covered`** — the answer touches it but leaves a gap.
+- **`untouched`** — the answer doesn't address it.
+
+**Evidence requirement (non-negotiable):** for `fully` or `partially`, you MUST
+extract the **specific span** of the user's answer that covers it AND write the
+**explicit inferred answer**. If you can't quote a span, it is NOT covered —
+classify as `untouched`. No "seems related".
+
+**Conservative asymmetry:** when torn between `fully` and `partially`, choose
+`partially`. A silent gap (false "answered") is worse than re-asking (mild
+annoyance).
+
+### Step 5 — Act on each bucket (high/low confidence)
+
+Apply the confidence rule. Confidence is YOUR assessment of how certain the
+inferred answer is, given the span.
+
+- **`fully-covered` + high confidence** → confirm in a BATCH, showing the
+  inferred answer per question so the user can catch a misread:
+
+  ```
+  From your answer, I've recorded:
+    • Q3 (who triggers retries): "The dunning cron retries 3× over 5 days."
+    • Q7 (manual vs auto): "Charges are automatic; only refunds are manual."
+  Correct anything, or say "ok" to confirm both.
+  ```
+
+- **`fully-covered` + low confidence** → ALWAYS ask explicitly, even though it
+  looks covered. Show your inference and ask for confirmation as a real question,
+  not a batch line.
+
+- **`partially-covered`** → NEVER skip. Re-ask, reframed to show what you have
+  and what's missing:
+
+  ```
+  Q5 — I got that charges retry 3×, but not what happens after the 3rd
+  failure. Does the contract suspend, or does it stay active with a flag?
+  ```
+
+- **`untouched`** → ask normally when its block comes up.
+
+### Step 6 — High-stakes override
+
+Some questions demand explicit confirmation **even when coverage looks full and
+confidence is high**. Never fold these into the silent batch-confirm. They are:
+
+- **Invariants / constraints** (Block C) — "X can never happen".
+- **Integration failure modes** (Block E) — webhook retries, timeouts, partner
+  error behavior.
+- **Product intent** that changes the narrative — "why it was designed this
+  way".
+
+For these, always surface the inferred answer as a direct question and get a
+clear yes/correction. Getting an invariant subtly wrong propagates into the
+tech guide as a false "the system prevents…".
+
+### Step 7 — Record with an audit trail
+
+When a question is closed via propagation (covered by another answer rather than
+asked directly), record on the question:
+
+```
+status: answered
+answered_via: propagation-from-Q3
+inferred_answer: "<the explicit answer you inferred>"
+user_confirmed: true        # always true — batch-confirm or explicit ask
+covering_span: "<the quoted span from the user's answer>"
+```
+
+Directly-asked questions record `answered_via: direct`. Phase 7 uses
+`inferred_answer` / the direct answer as the source of truth, and the audit
+trail lets a later reader see which answers were inferred vs stated.
+
+Verbatim preservation: store the user's actual answer text as written,
+including language (see `language-handling.md`). The `inferred_answer` is your
+distillation; the raw answer is kept too.
+
+### Step 8 — Interview file (optional, for a question-heavy topic)
+
+A single topic rarely needs file export. If a topic is unusually large (say
+>15 surviving questions), you may export a per-block file to
+`.livedocs/interview/<topic>/block-X.md` using the template below; otherwise the
+inline chat interview is better — the coverage pass is most natural in chat.
 
 ````markdown
-# Interview — Block {LETTER} — {BLOCK NAME in {lang}}
+# Interview — {topic} — Block {LETTER} — {BLOCK NAME in {lang}}
 
 **Date:** YYYY-MM-DD
 **Interviewee:** {user name from state}
-**Interviewer:** livedocs-bootstrap agent
 
 ## How to answer
 
-Answer below each question in the **{Answer:}** field. You can answer
-in prose, bullets, transcribed audio — whatever is practical. Skip
-with `/skip`, pause with `/pause`. Where I guessed, I marked 🟡 with
-what I assumed — just confirm or correct.
+Answer below each question in the **{Answer:}** field, or write one big
+answer at the top — I'll map it to the questions. Skip with `/skip`,
+pause with `/pause`. Where I guessed, I marked 🟡.
 
 ---
 
-## {Block name in {lang}}
+## Free-form (answer everything here if you prefer)
 
-### {Q#} — origin: {capability/slug} — confidence: {high|low}
+**{Answer:}**
+
+
+---
+
+### {Q#} — origin: {topic/article} — confidence: {high|low}
 
 {Question text in {lang}}
 
@@ -202,153 +203,78 @@ what I assumed — just confirm or correct.
 **{Answer:}**
 
 
-
 ---
-
-### {Q#} — ...
 ````
 
-The literal word `Answer:` above is the **answer marker** the agent
-greps for when reading the file back. Translate it for the user but
-keep it consistent within a run (e.g. `Resposta:` in pt-BR — always the
-same word, never mixed). Record the chosen marker in state under
-`answer_marker:` so the import step in Step 7 knows what to grep.
+The literal word `Answer:` is the **answer marker** the agent greps for.
+Translate it for the user but keep it consistent within a run (record it in
+state under `answer_marker:`).
 
-### Step 5 — Always include Block F
+### Step 9 — Always include Block F
 
-Block F is a fixed template appended after content blocks A–E
-(render in `{lang}`):
+Appended after A–E (render in `{lang}`):
 
 ````markdown
 # Block F — Direction of the guide (meta)
 
-These are about the guide, not about the system.
-
-**F1. Right depth?** Are the drafts too shallow, too deep, or right for
-this domain? Should we split into product + tech more aggressively?
+**F1. Right depth?** Too shallow, too deep, or right for this topic?
 
 **{Answer:}**
 
 ---
 
-**F2. Anything obvious I missed?** Is there something a maintainer of
-this product would consider essential that none of the drafts touch?
+**F2. Anything obvious I missed?** Something a maintainer would consider
+essential that the drafts don't touch?
 
 **{Answer:}**
 
 ---
 
-**F3. Next guide?** Now that this bootstrap is done, what should be the
-first guide we revisit or expand in maintenance mode?
-
-**{Answer:}**
-
----
-
-**F4. Anything I should have asked but didn't?** Open mic.
+**F3. Anything I should have asked but didn't?** Open mic.
 
 **{Answer:}**
 ````
 
-### Step 6 — Conduct the interview
+(Note: "what topic next?" is NOT asked here — the topic loop's selector owns the
+next-topic suggestion. Block F is about THIS guide's quality.)
 
-**Inline mode (chat, N ≤ 50):**
+### Step 10 — Pause / resume
 
-For each canonical, in block order (A → F), render the turn in `{lang}`.
-The skeleton below is shown in English for illustration:
-
-```
-Question 5/23 — Block B (Transitions) — origin: project-management/create-project
-
-The agent asks:
-  "When you create a project and it enters the 'Negotiation' Kanban
-   stage, does that trigger any automatic notification?"
-
-🟡 Provisional answer (confidence: low):
-  "No automatic notification — members see it when opening the Kanban."
-
-Other questions this one also answers:
-  - Q12 (billing/invoice-issuance): "Do stage changes trigger alerts?"
-
-Your answer (or /skip / /quit):
->
-```
-
-**File mode (N > 50):**
-
-Tell the user the files were created. Wait for them to say "done with
-block A" (or similar). Read the file, parse each answer marker section
-(`Resposta:` / `Answer:` / whatever is recorded in state under
-`answer_marker:`), save to state. Repeat for each block.
-
-### Step 7 — When user answers
-
-- Save to canonical: `status="answered"`, `answer="..."` (verbatim text
-  preserved, including language — see `language-handling.md`).
-- Propagate to merged questions: `status="answered"`, same answer.
-- **Re-evaluate other open questions**: an answer often resolves
-  others. After each answer, scan remaining canonicals. If any is
-  clearly now resolved by the new answer, ask (in `{lang}`, semantic
-  equivalent of):
-  > "Your answer also seems to resolve Q12 ('Does stage change emit an
-  > alert?'). OK to mark Q12 as answered with the same answer?"
-
-### Step 8 — Pause / resume
-
-Slash commands stay as-is regardless of `{lang}` — they're parser tokens.
-The agent's surrounding chat lines render in `{lang}`.
+Slash commands stay as-is regardless of `{lang}` — parser tokens.
 
 - `/skip` → leave question open, continue.
-- `/quit` or `/pause` → save state, exit gracefully (message in `{lang}`):
-  > "Pausing refinement. You answered 8/23 questions. To continue,
-  > re-invoke the skill — I'll resume from here."
-- `/abort` → save state with a `paused_at` timestamp, mark
-  `interview_status: paused`. On resume, skip already-answered questions.
+- `/list` → show the block's specific questions instead of free-form.
+- `/quit` or `/pause` → save state, exit (in `{lang}`): *"Pausing. You answered
+  N of M for this topic. Re-invoke to resume from here."*
 
-### Step 9 — End of interview
+### Step 11 — End of interview
 
-Save state, summarize (render in `{lang}`; English skeleton shown):
+Save state, set the topic status to `interviewed`, summarize (in `{lang}`):
 
 ```
-✓ Refinement complete — 18/23 answered, 5 skipped.
+✓ Interview done for recurring-billing — 6/7 answered, 1 skipped.
+  A: 2/2  B: 2/2  C: 1/1  D: 1/1  E: 0/1 (skipped)  F: meta captured
+  3 answered directly, 3 by propagation (all confirmed).
 
-  By block:
-    A (meaning):    4/4
-    B (transitions): 5/6
-    C (invariants): 3/4
-    D (UX/support): 2/4
-    E (edges):      2/3
-    F (direction):  2/2
-
-Next phase: Global Update — affected articles will be reopened and the
-answers incorporated. Estimate: ~M affected articles, cost ~$X.
-
-Proceed?
+Next: rewrite the affected articles (Phase 7) with these answers. Proceed?
 ```
 
 ---
 
 ## Pitfalls
 
-- **User answers vague (equivalent of "I don't know" / "depends")**:
-  that's a real answer. Save it; Phase 7 will write it as a documented
-  uncertainty in the guide.
-- **User answers a 5-paragraph essay**: accept all. Save full text. Phase
-  7 will distill what's relevant per affected article.
-- **Question has no clear origin guide**: dedup might lose it. Fallback:
-  treat as standalone and use during Phase 7's global update against
-  all guides.
-- **Sub-agent reformulates questions excessively**: the dedup prompt has
-  a "rewrite if a better phrasing helps" clause but isn't an
-  instruction to rewrite all. Keep original where it's already clear.
-- **User pauses and resumes much later**: pending questions older than
-  ~2 weeks may be stale (code may have changed). When resuming, warn
-  the user and offer to re-run Phase 5.5 to see if any are now
-  answer-able from current code.
-- **Block classification drifts**: if you get questions with no clear
-  block fit, default to **E (code-suggested edges)** — almost any
-  ambiguity-from-code question fits there.
-- **Cross-batch dedup forgets to merge**: cross-batch sub-agent receives
-  only canonicals (no merged IDs from Pass 1). When it creates a new
-  cluster spanning Pass 1 batches, the reconciliation step (Step 2,
-  algorithm point 2) must absorb both Pass 1 canonicals into the new one.
+- **Treating coverage as binary.** The whole point is three buckets. A question
+  that's "sort of covered" is `partially` → always followed up.
+- **Marking covered without quoting a span.** If you can't quote the user's
+  words that answer it, it's `untouched`. No vibes.
+- **Folding an invariant or integration-failure question into silent
+  batch-confirm.** High-stakes questions always get explicit confirmation
+  (Step 6), even when coverage looks complete.
+- **Carrying questions across topics.** Phase 6 is scoped to the current topic.
+  Another topic's questions are not in play here.
+- **Re-introducing global dedup.** There is none. A topic's question set is
+  small; if two are near-duplicates, merge inline and move on.
+- **User answers vague ("depends" / "I don't know").** That's a real answer —
+  save it; Phase 7 writes it as a documented uncertainty.
+- **User writes a 5-paragraph essay.** Accept all, store verbatim, let the
+  coverage pass map it to questions. This is the intended easy path.

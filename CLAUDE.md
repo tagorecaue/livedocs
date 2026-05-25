@@ -164,7 +164,7 @@ Tested combinations: Claude Code (Sonnet 4 / Opus class), Hermes
 3. **Read `privacy.md`** before touching anything that decides what a
    sub-agent reads. The denylist is the contract.
 
-4. **Read `pending-questions.md`** before changing how Phase 4 / 5 /
+4. **Read `pending-questions.md`** before changing how Phase 4 /
    5.5 / 6 deal with questions. The INTENT-or-EXPERIENCE principle is
    the discriminator that prevents the whole flow from degenerating
    into "ask the human everything".
@@ -183,12 +183,14 @@ Tested combinations: Claude Code (Sonnet 4 / Opus class), Hermes
 
 Not committed dates, just intent:
 
-- **v1.4** — incremental maintenance mode (re-run skill on a project
-  that already has `docs/`, detect code changes via git diff, update
-  only affected articles).
-- **v1.5** — state migration to JSON with a published schema (current
+- **v2.0 (shipped)** — incremental-by-topic is the only model; on-demand `sync`
+  command for cross-references; coverage-aware per-topic interview.
+- **v2.1** — incremental maintenance: `sync` already flags `stale` guides
+  (source changed since scan); next is driving a guided re-document of just
+  those guides via the topic loop, diffing against the previous run.
+- **v2.2** — state migration to JSON with a published schema (current
   state is markdown for human-edit ergonomics; JSON helps tooling).
-- **v2.0** — Chatwoot / generic help-center publication phase.
+- **v3.0** — Chatwoot / generic help-center publication phase.
   Currently the skill produces local `docs/` only.
 
 See `.spec/skill-oss-prep/plano-skill-oss-prep.md` for the current

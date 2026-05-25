@@ -27,15 +27,17 @@ antiga da skill e oferecer um re-pass. Veja o
 ## Faixas de custo
 
 Direcionado pelo provedor de LLM do seu agente. Observado em runs
-reais:
+reais. Como a skill documenta um tópico por vez, o custo é distribuído
+ao longo das sessões, e não concentrado de uma vez:
 
 - Phase 4 (draft): **US$ 0,30–1,00 por artigo** (variância de 3× com
-  o tamanho da capability)
-- Phase 5 (stitch): **US$ 0,50–3,00 por capability**
-- Phase 5.5 (triage): **US$ 0,20–1,50 por capability**
-- Phase 6 (dedup + entrevista): ~US$ 0,50–2 no dedup; ~US$ 0,05 por
-  Q no chat
-- Phase 7 (rewrite): **US$ 0,30–0,80 por artigo afetado**
+  o tamanho do tópico)
+- Phase 5.5 (triage): **US$ 0,20–1,50 por par de artigos**
+- Phase 6 (entrevista): ~US$ 0,05 por pergunta no chat; a dedup
+  intra-tópico, se houver, é uma única chamada inline
+- Phase 7 (atualização de tópico): **US$ 0,30–0,80 por artigo afetado**
+- Sync (cross-corpus sob demanda): escala com o tamanho do corpus;
+  rode ocasionalmente
 
 O custo real é gravado em `.livedocs/state.md`. Não prometa um valor
 fixo para o usuário — meça com o seu próprio projeto primeiro.
@@ -71,12 +73,18 @@ Política completa: [`references/privacy.md`](../../skills/livedocs-bootstrap/re
 
 - **Sem publicação** — gera markdown local só. Subir para Chatwoot
   ou outros help centers está planejado, não implementado.
-- **Sem manutenção incremental** — o bootstrap é one-shot hoje.
-  Re-rodar começa um run novo do zero em vez de fazer diff contra o
-  anterior. Modo de manutenção está planejado.
+- **Sync é manual** — cross-links, glossário e recomendações de
+  "próximos" são reconciliados por um comando `sync` sob demanda, e
+  não automaticamente após cada tópico. Isso é por design (você
+  controla quando os links são desenhados), mas significa que um
+  tópico recém-documentado não tem cross-links até você rodar o sync.
+- **A detecção de defasagem sinaliza, não corrige** — o sync marca
+  como `stale` os guides cuja fonte mudou; re-documentá-los é uma
+  decisão manual no loop de tópico. A manutenção incremental completa
+  (fazendo diff contra o run anterior) está planejada.
 - **Variabilidade de custo entre LLMs** — modelos da classe Sonnet
   e Opus produzem drafts visivelmente melhores que modelos menores;
   a qualidade da skill segue a qualidade do agente.
 - **Heurística do `is_intro`** — a Phase 4 às vezes gera um artigo
-  de visão geral para capabilities pequenas que não precisam. Você
-  pode remover via Phase 3 antes da Phase 4 começar.
+  de visão geral para tópicos pequenos que não precisam. Você pode
+  remover via Phase 3 antes de documentar o tópico.

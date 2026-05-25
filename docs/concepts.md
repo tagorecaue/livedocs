@@ -43,36 +43,61 @@ same-flavor guides. They describe the same thing for different
 audiences; linking them creates a loop that adds no value and
 confuses readers about which flavor they're in.
 
+## Incremental by topic — one capability at a time
+
+LiveDocs documents a project **one topic at a time**, never all at once. After
+a one-time setup (guidance, code scan, taxonomy), the maintainer picks a single
+capability or journey and the agent takes it end to end — draft, code-first
+triage, interview, rewrite — then returns and suggests the next topic.
+
+This is a deliberate choice, learned from real runs where the "document
+everything at once" approach failed three ways: it diluted article richness,
+it collapsed per-topic nuance during a global question dedup, and it swept in
+internal-only and deprecated screens that should never have become user docs.
+Letting the maintainer choose each topic keeps the junk out and the depth in.
+
+The global picture the bulk approach offered isn't lost: the code graph plus
+the taxonomy from setup give the agent its overview without drafting anything.
+
+Work that spans topics — cross-links, the shared glossary, "what to read next"
+recommendations, detecting guides gone stale — does NOT happen inside the
+per-topic loop. It runs as a separate, on-demand **sync** command over the whole
+corpus, so closing one topic never forces edits to topics already done.
+
 ## Pending questions, not interruptions
 
 When the agent finds something the code doesn't reveal (intent, UX
 rationale, integration behavior under failure), it does NOT pause and
-interrupt the user. It registers a **pending question**, writes a
-provisional answer into the draft with a confidence flag, and moves on.
+interrupt the user. It registers a **pending question**, writes a provisional
+answer into the draft with a confidence flag, and moves on.
 
-Questions accumulate during Phase 4 and Phase 5. Phase 5.5 re-checks
-each one against the code, auto-answering the ones with literal
-evidence and patching the article that should have had the answer.
-Whatever survives reaches Phase 6 — a single batch interview in
-thematic blocks (meaning / transitions / invariants / UX-and-support /
-code edges / direction).
+Questions accumulate during a topic's draft. The topic's code-first triage
+re-checks each one against the code, auto-answering the ones with literal
+evidence and patching the article that should have had the answer. Whatever
+survives reaches the interview — scoped to that single topic, in thematic
+blocks (meaning / transitions / invariants / UX-and-support / code edges /
+direction).
 
-The cost of context-switching the human ("answer this right now") is
-higher than the cost of an extra phase. Batched interviews also
-benefit from cross-question dedup — one answer often resolves several.
+The interview is **coverage-aware**: the user can answer in one big free-form
+dump, and after each answer the agent re-checks every still-open question for
+whether that answer already covered it — fully, partially, or not at all. Fully
+covered with high confidence is confirmed in a batch (showing what was
+inferred); partially covered is always re-asked for the missing piece; nothing
+important is silently marked answered. The cost of context-switching the human
+is higher than the cost of an extra check.
 
 ## Isolated context per draft
 
-Phase 4 generates each article in **isolated context**. The sub-agent
-sees: the guidance text, a menu of other articles' titles (no
+When drafting, each article is generated in **isolated context**. The
+sub-agent sees: the guidance text, a menu of other articles' titles (no
 bodies), the article's own code anchors, the style guide. Nothing else.
 No global "all docs in prompt".
 
 Two reasons: **cost** (prompts that grow with N articles get
 expensive fast) and **coherence** (an LLM's attention degrades when
 keeping all other articles in mind while writing this one).
-Cross-linking happens later in Phase 5, where input is a short
-markdown index, not raw code.
+Cross-linking happens later, during the on-demand **sync** pass, where
+input is a short markdown index, not raw code.
 
 ## Guidance text + code capture point
 

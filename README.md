@@ -26,36 +26,51 @@ Two paired outputs per topic: a **product guide** (no jargon, for end
 users) and a **technical guide** (with `file:line` references, for
 devs). Both live inside the codebase. No cloud, no lock-in.
 
-## How it works, in 5 steps
+## How it works
 
+LiveDocs documents your project **one topic at a time** — never all at once.
+First a one-time setup, then a loop you drive: you pick a topic, the agent takes
+it end to end, then suggests the next one.
+
+**One-time setup — build the map**
 1. **Read the repo, propose a taxonomy.** Builds a semantic graph
    of the codebase (using
    [graphify](https://github.com/safishamsi/graphify) — the
    widely-used MIT-licensed knowledge-graph tool by Safi Shamsi),
-   derives categories and articles, you approve.
+   derives categories and articles, you approve. The taxonomy is the map;
+   it stays editable as you go.
    → [Phase 1](skills/livedocs-bootstrap/references/phase-1-scan.md),
    [2](skills/livedocs-bootstrap/references/phase-2-taxonomy.md),
    [3](skills/livedocs-bootstrap/references/phase-3-review.md)
 
-2. **Write every article in parallel, in two paired versions.**
-   Product flavor (no jargon) + technical flavor (`file:line` refs).
-   Marks where screenshots are needed. Logs every question the code
-   alone can't resolve.
-   → [Phase 4](skills/livedocs-bootstrap/references/phase-4-pass1-drafts.md)
+**Topic loop — repeat per topic, you choose each one**
+2. **Pick a topic; the agent drafts its articles** in two paired versions —
+   product flavor (no jargon) + technical flavor (`file:line` refs). Internal or
+   deprecated screens simply never get picked, so they never pollute the docs.
+   → [Topic loop](skills/livedocs-bootstrap/references/topic-loop.md),
+   [Phase 4](skills/livedocs-bootstrap/references/phase-4-pass1-drafts.md)
 
-3. **Cross-link, deduplicate, and code-first triage** every pending
-   question. Only what truly needs a human reaches you.
-   → [Phase 5](skills/livedocs-bootstrap/references/phase-5-pass2-stitching.md),
-   [5.5](skills/livedocs-bootstrap/references/phase-5.5-triage.md)
+3. **Code-first triage** of every pending question for that topic. Only what
+   truly needs a human survives.
+   → [Phase 5.5](skills/livedocs-bootstrap/references/phase-5.5-triage.md)
 
-4. **Interview you in chat** with whatever survived the triage,
-   grouped by theme (meaning / transitions / invariants / UX-support /
-   code edges / direction). Each question shows the agent's guess +
-   confidence level.
+4. **A focused, coverage-aware interview** about that one topic. Answer in one
+   big dump if you like — after each answer the agent re-checks every open
+   question for what you already covered (fully / partially / not), confirms the
+   sure ones in a batch, and always re-asks the partial ones. Nothing important
+   is silently skipped.
    → [Phase 6](skills/livedocs-bootstrap/references/phase-6-refinement.md)
 
-5. **Rewrite only the affected articles** from your answers.
+5. **Rewrite that topic's affected articles** from your answers, commit, and
+   return to the selector for the next topic.
    → [Phase 7](skills/livedocs-bootstrap/references/phase-7-global-update.md)
+
+**On demand — sync the whole doc set**
+6. **Sync** reconciles everything that spans topics — cross-links, glossary,
+   "what to read next", stale detection — over the entire corpus, whenever you
+   ask. It never runs inside the loop, so closing one topic never forces edits
+   to topics already done.
+   → [Sync](skills/livedocs-bootstrap/references/sync-flow.md)
 
 Real run: 76 articles + 6 journeys, ~$110 in LLM spend, ~4h human
 time. Full breakdown in the [case study](docs/case-study.md).
